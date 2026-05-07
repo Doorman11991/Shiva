@@ -1,17 +1,40 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 from core.transformer_architecture import TransformerEncoderBlock
 
-class LatentAligner:
-    def __init__(self, d_model=512, num_heads=8, lr=1e-4, temperature=0.07):
+class LatentAligner(nn.Module):
+    def __init__(self, input_dims=None, d_model=512, num_heads=8, lr=1e-4, temperature=0.07):
+        super().__init__()
+        if input_dims is None:
+            input_dims = {}
+        self.aligners = nn.ModuleDict({
+            modality: nn.Linear(dim, d_model) for modality, dim in input_dims.items()
+        })
+        # Information Bottleneck constraint
+        self.bottleneck = nn.Sequential(
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Linear(d_model // 2, d_model)
+        )
         self.backbone = TransformerEncoderBlock(d_model, num_heads)
         self.temperature = temperature
         self.emotion_vocab = {'Angry': 0, 'Sad': 1, 'Happy': 2, 'Calm': 3}
         self.num_emotions = len(self.emotion_vocab)
-        self.emotion_embeddings = torch.nn.Embedding(self.num_emotions, d_model)
-        all_params = list(self.backbone.parameters()) + list(self.emotion_embeddings.parameters())
-        self.optimizer = optim.AdamW(all_params, lr=lr, weight_decay=1e-2)
+        self.emotion_embeddings = nn.Embedding(self.num_emotions, d_model)
+        self.optimizer = optim.AdamW(self.parameters(), lr=lr, weight_decay=1e-2)
+
+    def forward(self, x, modality):
+        z_raw = self.aligners[modality](x)
+        # Apply the Information Bottleneck to strip non-essential info
+        z_aligned = self.bottleneck(z_raw)
+        return z_aligned
+
+    def recalibrate(self):
+        for layer in self.aligners.values():
+            if isinstance(layer, nn.Linear):
+                nn.init.orthogonal_(layer.weight.data)
         
     def compute_infonce_loss(self, z_a, z_b):
         batch_size = z_a.shape[0]

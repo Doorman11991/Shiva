@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-from core.shiva_policy import ModelPolicy
+import torch.linalg as linalg
+from core.shiva_policy import ContinuousSACPolicy
 
 class SumTree:
     def __init__(self, capacity):
@@ -82,10 +83,10 @@ class PrioritizedReplayBuffer:
             self.max_priority = max(self.max_priority, p)
 
 class ShivaTrainer:
-    def __init__(self, d_model, action_dim, capacity=1000000, device="cpu"):
+    def __init__(self, d_model, action_dim, shiva_model=None, latent_aligner=None, emotional_core=None, capacity=1000000, device="cpu"):
         self.device = torch.device(device)
-        self.policy = ModelPolicy(d_model, action_dim).to(self.device)
-        self.target_policy = ModelPolicy(d_model, action_dim).to(self.device)
+        self.policy = ContinuousSACPolicy(d_model, action_dim).to(self.device)
+        self.target_policy = ContinuousSACPolicy(d_model, action_dim).to(self.device)
         self.target_policy.load_state_dict(self.policy.state_dict())
         
         self.buffer = PrioritizedReplayBuffer(capacity)
@@ -102,6 +103,10 @@ class ShivaTrainer:
             list(self.policy.critic1.parameters()) + 
             list(self.policy.critic2.parameters()), lr=3e-4
         )
+        
+        self.model = shiva_model if shiva_model is not None else self.policy
+        self.aligner = latent_aligner
+        self.emotions = emotional_core
 
     def _process_batch(self, batch):
         states = torch.stack([s[0] for s in batch]).to(self.device)
@@ -158,3 +163,54 @@ class ShivaTrainer:
     def _soft_update(self):
         for param, target_param in zip(self.policy.parameters(), self.target_policy.parameters()):
             target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+
+    def fit_weight_dim(self, W_ext, target_shape):
+        if W_ext.shape == target_shape:
+            return W_ext
+    
+        U, S, Vh = linalg.svd(W_ext, full_matrices=False)
+
+        U_target = U[:target_shape[0], :min(U.shape[1], target_shape[1])]
+        S_target = torch.diag(S[:min(len(S), target_shape[0], target_shape[1])])
+        Vh_target = Vh[:min(Vh.shape[0], target_shape[0], target_shape[1]), :target_shape[1]]
+
+        result = torch.zeros(target_shape)
+        fitted = U_target @ S_target @ Vh_target
+        result[:fitted.shape[0], :fitted.shape[1]] = fitted
+        return result
+
+    def average_attention_heads(self, W_mha, src_heads, target_heads):
+        d_model = W_mha.shape[0]
+        d_head = d_model // src_heads
+        
+        reshaped = W_mha.view(src_heads, d_head, d_model)
+        bucket_size = src_heads // target_heads
+        
+        averaged = torch.stack([
+            reshaped[i*bucket_size : (i+1)*bucket_size].mean(dim=0)
+            for i in range(target_heads)
+        ])
+        return averaged.view(-1, d_model)
+
+    def rapid_frankenmerge(self, ext_state_dict, ext_config):
+        if hasattr(self.model, "config"):
+            target_dim = self.model.config.hidden_size #type: ignore
+            target_heads = self.model.config.num_heads #type: ignore
+        else:
+            target_dim = self.model.backbone.d_model
+            target_heads = self.model.backbone.num_heads
+        new_state = {}
+
+        for name, param in ext_state_dict.items():
+            if "attn" in name or "attention" in name:
+                # Handle Attention Head Compression
+                new_state[name] = self.average_attention_heads(param, ext_config['num_heads'], target_heads)
+            else:
+                # Handle Dimensional Fitting
+                target_shape = self.model.state_dict()[name].shape if name in self.model.state_dict() else param.shape
+                new_state[name] = self.fit_weight_dim(param, target_shape)
+
+        self.model.load_state_dict(new_state, strict=False)
+        # Trigger 'Curiosity' update in emotional core after ingestion
+        if self.emotions is not None:
+            self.emotions.update_homeostasis(action_impact=0.1, environment_surprise=0.8)

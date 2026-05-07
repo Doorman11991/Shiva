@@ -41,13 +41,19 @@ class TransformerEncoderBlock(nn.Module):
         self.attn_gate_net = GateHyperNetwork(d_model)
         self.ff_gate_net = GateHyperNetwork(d_model)
 
-    def compute_multi_head_attention(self, x):
+        self.emotional_gate = nn.Parameter(torch.ones(1))
+
+    def compute_multi_head_attention(self, x, bias_shift: float | torch.Tensor = 0.0):
         batch_size, seq_len, _ = x.shape
         Q, K, V = self.q_proj(x), self.k_proj(x), self.v_proj(x)
         Q = Q.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         K = K.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         V = V.view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
         scores = (Q @ K.transpose(-2, -1)) / math.sqrt(self.d_k)
+        
+        if isinstance(bias_shift, torch.Tensor) or bias_shift != 0.0:
+            scores = scores + bias_shift
+            
         attn_weights = torch.softmax(scores, dim=-1)
         context = attn_weights @ V
         context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
@@ -58,10 +64,17 @@ class TransformerEncoderBlock(nn.Module):
         gate_ff = self.ff_gate_net(x)
         return gate_attn, gate_ff
 
-    def forward_pass(self, x):
+    def forward_pass(self, x, valence=None):
         gate_attn, gate_ff = self.compute_dynamic_gates(x)
-        attn_out = self.compute_multi_head_attention(x)
-        # Pre-LayerNorm variant
+        
+        bias_shift = 0.0
+        if valence is not None:
+            bias_shift = valence * self.emotional_gate
+            if isinstance(bias_shift, torch.Tensor):
+                while bias_shift.dim() < 4:
+                    bias_shift = bias_shift.unsqueeze(-1)
+                    
+        attn_out = self.compute_multi_head_attention(x, bias_shift=bias_shift)
         x = x + (gate_attn * attn_out)
         x = self.norm1(x)
         ff_out = self.ff_net(x)

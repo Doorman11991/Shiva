@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Normal
 from core.transformer_architecture import TransformerEncoderBlock
 
-class Actor(nn.Module):
+class ContinuousActor(nn.Module):
     def __init__(self, d_model, action_dim):
         super().__init__()
         self.mu = nn.Linear(d_model, action_dim)
@@ -26,12 +27,12 @@ class Actor(nn.Module):
         log_prob = log_prob.sum(dim=-1, keepdim=True)
         return action, log_prob
 
-class ModelPolicy(nn.Module):
+class ContinuousSACPolicy(nn.Module):
     def __init__(self, d_model, action_dim, num_heads=8):
         super().__init__()
         self.backbone = TransformerEncoderBlock(d_model, num_heads)
-        self.actor1 = Actor(d_model, action_dim) # e.g., Stability expert
-        self.actor2 = Actor(d_model, action_dim) # e.g., Goal-reaching expert
+        self.actor1 = ContinuousActor(d_model, action_dim) # e.g., Stability expert
+        self.actor2 = ContinuousActor(d_model, action_dim) # e.g., Goal-reaching expert
 
         self.gate = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
@@ -76,3 +77,27 @@ class ModelPolicy(nn.Module):
         z = self.backbone.forward_pass(state).mean(dim=1)
         sa_pair = torch.cat([z, action], dim=-1)
         return self.critic1(sa_pair), self.critic2(sa_pair)
+
+
+class DiscreteValencePolicy(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super().__init__()
+        self.actor = nn.Sequential(
+            nn.Linear(state_dim, 512),
+            nn.LayerNorm(512),
+            nn.GELU(),
+            nn.Linear(512, action_dim)
+        )
+        self.value_manifold = nn.Linear(state_dim, 1)
+
+    def get_empowerment(self, action_probs):
+        marginal = action_probs.mean(dim=0)
+        mi = torch.sum(action_probs * torch.log(action_probs / (marginal + 1e-9) + 1e-9), dim=-1)
+        return mi.mean()
+
+    def forward(self, state, valence):
+        logits = self.actor(state)
+        action_probs = F.softmax(logits + valence, dim=-1)
+        
+        empowerment = self.get_empowerment(action_probs)
+        return action_probs, empowerment
