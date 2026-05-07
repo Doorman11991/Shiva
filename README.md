@@ -1,65 +1,35 @@
-Shiva AGI: Universal Zero-Shot Intelligence Framework
-1. Overview
 
-Shiva is a domain-agnostic Artificial General Intelligence (AGI) framework designed to bridge heterogeneous data streams—Robotics, Quant Finance, Edge Devices, and Language—into a single Universal Latent Space (z∈R512).
+# Shiva AGI: Universal Gated Cognitive Engine
 
-By utilizing Reinforcement Learning (SAC) and Contrastive Latent Alignment, Shiva enables zero-shot transfer learning: intelligence learned in the physics domain (locomotion) can be applied to digital domains (API calls/Software) without retraining, provided their representations are aligned.
-2. Key Architecture Features (Refer to image_bf54e6.png)
+## 1. Overview
+**Shiva** is a domain-agnostic Artificial General Intelligence (AGI) framework designed to achieve human-like cognition by bridging heterogeneous data streams—Robotics, Finance, Edge Systems—into a unified **Universal Latent Space ($z \in \mathbb{R}^{512}$)**. 
 
-    Universal Latent Space: A shared d=512 embedding space aligned via contrastive consistency loss.
+Beyond functional task-solving, Shiva incorporates **Synthetic Consciousness** and **Emotional Feedback Loops**, allowing the agent to evaluate the "internal state" and "ethical weight" of its actions across physical and digital domains.
 
-    Shiva Core: An off-policy Soft Actor-Critic (SAC) policy that operates purely in the latent space, making it agnostic to the input source.
+## 2. Core Architecture
+*   **Dynamic Gated Transformer**: A custom-scratch transformer backbone utilizing **GateHyperNetworks** and **Pre-LayerNorm** stability for high-performance feature extraction.
+*   **Dual-Actor Soft-Gate SAC**: A specialized Reinforcement Learning policy utilizing two expert actors (e.g., Stability vs. Objective) mixed dynamically by a soft-gating mechanism.
+*   **Prioritized Experience Replay (PER)**: A **Torch-based SumTree** memory buffer that utilizes **Importance Sampling** to ensure unbiased, high-efficiency learning from critical experiences.
+*   **Synthetic Affective Layer**: Encodes "emotions" (e.g., urgency, caution, curiosity) as latent priors that modulate the **Soft Gate**, effectively steering the AGI's personality and decision-making style.
 
-    Weight Incorporation: Capability to "hot-swap" pre-trained LLM weights (e.g., Llama-3) to act as a world-model backbone, significantly reducing learning time.
+## 3. Key Capabilities
+*   **Zero-Shot Domain Transfer**: Knowledge learned in robotics (physical constraints) can be instantly projected into software or financial domains via latent alignment.
+*   **Weight Incorporation**: Capability to "hot-swap" and adapt pre-trained LLM weights (e.g., Llama-3) to act as a linguistic and logical world-model backbone.
+*   **Autonomous Purpose**: Utilizes an **Automatic Reward Constructor** to synthesize its own optimization goals from high-level natural language intent.
+*   **Universal Portability**: Engineered for deployment on high-compute servers, autonomous quadwalking bots, and resource-constrained edge devices.
 
-    Automatic Reward Constructor: An LLM-driven module that reads domain metadata and synthesizes mathematical reward functions on the fly.
+## 4. Technical Specifications
+*   **Latent Dimension**: 512-dim Hyper-sphere
+*   **Policy**: Entropy-Regularized Soft Actor-Critic (SAC)
+*   **Optimizer**: Integrated `torch.optim.Adam` for rapid convergence
+*   **Memory**: $O(\log N)$ SumTree with Importance Sampling correction
 
-    Self-Evaluation Loop: A metacognitive layer that monitors latent drift and prediction errors to self-correct the agent's learning direction.
+## 5. Development Roadmap
+1.  **Phase 1**: Scratch Transformer & Universal Latent Alignment.
+2.  **Phase 2**: Dual-Actor SAC & Gating Policy Implementation.
+3.  **Phase 3**: Integration of Affective (Emotional) State Modulators.
+4.  **Phase 4**: Deployment and Zero-Shot Benchmarking across heterogenous domains.
 
-3. Getting Started
-Prerequisites
-
-    Python 3.10+
-
-    PyTorch 2.0+
-
-    NVIDIA GPU (CUDA 11.8+)
-
-    Docker (Optional for simulated environments)
-
-Installation
-Bash
-
-git clone https://github.com/your-username/shiva.git
-cd shiva
-pip install -r requirements.txt
-
-Running a Zero-Shot Experiment
-
-To train on Robotics and evaluate zero-shot performance on Quant Finance:
-Bash
-
-python experiments/zero_shot_transfer.py --source robotics --target quant --weights ./weights/pretrained_llms/llama-3-8b
-
-4. Research Contribution
-
-Shiva aims to prove that intelligence is a mathematical invariant. Success is measured through:
-
-    Cross-domain Transfer Rate: Performance on Domain B after zero practice.
-
-    Sample Efficiency: Speed of convergence compared to domain-specific baselines.
-
-    Latent Alignment Quality: Mutual Information (MI) and t-SNE clustering across diverse data types.
-
-5. Startup & Scaling Potential
-
-Shiva is designed as a Horizontal AI Infrastructure.
-
-    Robotics: Powering heterogeneous fleets (Drones, Quadrupedal, Humanoid).
-
-    Edge AI: Real-time remediation and register-level control.
-
-    Finance: Multi-modal signal processing for predictive modeling.
 
 ```plaintext
 shiva/
