@@ -71,3 +71,4 @@ class EmotionalCore(nn.Module):
     def calculate_strain(self):
         target = self.target_state.to(self.internal_state.device)
         return torch.norm(self.internal_state - target)
+    #This is the new updated code for the Shiva code. Yet to add better functionalities to it.
