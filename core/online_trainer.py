@@ -108,6 +108,19 @@ class ShivaTrainer:
         self.aligner = latent_aligner
         self.emotions = emotional_core
 
+    def dream_cycle(self,batch=32):
+        dream_states=self.memory.get_dream_batch(batch_size)
+        if dream_states is None:
+            return
+        self.optimizer.zero_grad()
+        valence=self.self.emotions.get_valence(dream_states[:,-1,:])
+        outputs=self.model(dream_states[:,-1,:])
+        target=dream_states[:,1:,:]
+        dream_loss=F.mse_loss(outputs,target)
+        dream_loss.backward()
+        self.optimizer.step()
+        return dream_loss.item()
+
     def _process_batch(self, batch):
         states = torch.stack([s[0] for s in batch]).to(self.device)
         actions = torch.stack([s[1] for s in batch]).to(self.device)

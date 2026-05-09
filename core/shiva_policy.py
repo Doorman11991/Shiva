@@ -55,10 +55,11 @@ class ContinuousSACPolicy(nn.Module):
         z = self.backbone.forward_pass(state)
         z_global = z.mean(dim=1) 
         
-        g = self.gate(z_global)
-
-        mu1, log_std1 = self.actor1(z_global)
-        mu2, log_std2 = self.actor2(z_global)
+        identity_context=self.memory.get(identity_context(z_global)
+        z_conscious=z_global+identity_context
+        g = self.gate(z_conscious)
+        mu1, log_std1 = self.actor1(z_conscious)
+        mu2, log_std2 = self.actor2(z_conscious)
         blended_mu = g * mu1 + (1 - g) * mu2
         blended_log_std = g * log_std1 + (1 - g) * log_std2
         
