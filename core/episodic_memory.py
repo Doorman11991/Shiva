@@ -25,5 +25,5 @@ class EpisodicMemory(nn.Module):
         return torch.stack([s['states'] for s in samples])
     def get_identity_context(self, current_latent):
         _, h_n = self.narrative_encoder(current_latent.unsqueeze(1))
-        identity_context = h_n.squeeze(0)
+        identity_context = h_n[-1]
         return identity_context + self.self_token.squeeze(0)

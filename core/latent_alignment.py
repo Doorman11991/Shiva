@@ -48,7 +48,6 @@ class LatentAligner(nn.Module):
         return (loss_a_to_b + loss_b_to_a) / 2
 
     def compute_emotional_alignment_loss(self, z_a, z_b, z_emotion):
-        """Computes a 3-way contrastive loss between data views and an emotion vector."""
         loss_a_b = self.compute_infonce_loss(z_a, z_b)
         loss_a_emotion = self.compute_infonce_loss(z_a, z_emotion)
         loss_b_emotion = self.compute_infonce_loss(z_b, z_emotion)
@@ -57,15 +56,6 @@ class LatentAligner(nn.Module):
         return (loss_a_b + loss_a_emotion + loss_b_emotion) / 3
 
     def train_step(self, data_a, data_b, emotion_ids=None):
-        """
-        Performs a training step to align data_a and data_b.
-        If emotion_ids are provided, the alignment is conditioned on the emotion.
-        
-        Args:
-            data_a: First batch of data.
-            data_b: Second batch of data (positive pairs for data_a).
-            emotion_ids: Optional tensor of integer IDs for the desired emotion for each pair.
-        """
         self.optimizer.zero_grad()
         z_a = self.backbone.forward_pass(data_a)
         z_b = self.backbone.forward_pass(data_b)

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
 from core.transformer_architecture import TransformerEncoderBlock
-
+from core.episodic_memory import EpisodicMemory
 class ContinuousActor(nn.Module):
     def __init__(self, d_model, action_dim):
         super().__init__()
@@ -33,7 +33,7 @@ class ContinuousSACPolicy(nn.Module):
         self.backbone = TransformerEncoderBlock(d_model, num_heads)
         self.actor1 = ContinuousActor(d_model, action_dim) # e.g., Stability expert
         self.actor2 = ContinuousActor(d_model, action_dim) # e.g., Goal-reaching expert
-
+        self.memory=EpisodicMemory()
         self.gate = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.GELU(),
@@ -55,7 +55,7 @@ class ContinuousSACPolicy(nn.Module):
         z = self.backbone.forward_pass(state)
         z_global = z.mean(dim=1) 
         
-        identity_context=self.memory.get(identity_context(z_global)
+        identity_context=self.memory.get_identity_context(z_global)
         z_conscious=z_global+identity_context
         g = self.gate(z_conscious)
         mu1, log_std1 = self.actor1(z_conscious)
