@@ -1,65 +1,104 @@
+from __future__ import annotations
+from typing import Any, Dict, List, Optional, Tuple
 import torch
 import torch.nn.functional as F
-import torch.linalg as linalg
+from core.interfaces import IReplayBuffer, IWeightMergeStrategy
+from core.emotional_core import EmotionalCore
 from core.shiva_policy import ContinuousSACPolicy
 
+
+# ---------------------------------------------------------------------------
+# SumTree
+# ---------------------------------------------------------------------------
+
 class SumTree:
-    def __init__(self, capacity):
+    """
+    Binary segment tree for O(log n) priority updates and proportional sampling.
+
+    Internal layout:
+        tree[0]              — root (total priority sum)
+        tree[capacity-1 :]   — leaf nodes (one per experience slot)
+        data[i]              — experience at leaf position i
+    """
+
+    def __init__(self, capacity: int) -> None:
         self.capacity = capacity
         self.tree = torch.zeros(2 * capacity - 1, dtype=torch.float32)
-        self.data = [None] * capacity
+        self.data: List[Any] = [None] * capacity
         self.write = 0
 
-    def _propagate(self, idx, change):
+    def _propagate(self, idx: int, change: float) -> None:
         parent = (idx - 1) // 2
         self.tree[parent] += change
         if parent != 0:
             self._propagate(parent, change)
 
-    def update(self, idx, p):
+    def update(self, idx: int, p: float) -> None:
         change = p - self.tree[idx].item()
         self.tree[idx] = p
         self._propagate(idx, change)
 
-    def add(self, p, data):
+    def add(self, p: float, data: Any) -> None:
         idx = self.write + self.capacity - 1
         self.data[self.write] = data
         self.update(idx, p)
-        self.write += 1
-        if self.write >= self.capacity:
-            self.write = 0
+        self.write = (self.write + 1) % self.capacity
 
-    def get_leaf(self, v):
+    def get_leaf(self, v: float) -> Tuple[int, float, Any]:
         parent_idx = 0
         while True:
-            left_child = 2 * parent_idx + 1
-            right_child = left_child + 1
-            if left_child >= len(self.tree):
-                leaf_idx = parent_idx
+            left = 2 * parent_idx + 1
+            right = left + 1
+            if left >= len(self.tree):
                 break
-            if v <= self.tree[left_child].item():
-                parent_idx = left_child
+            if v <= self.tree[left].item():
+                parent_idx = left
             else:
-                v -= self.tree[left_child].item()
-                parent_idx = right_child
+                v -= self.tree[left].item()
+                parent_idx = right
+        leaf_idx = parent_idx
         return leaf_idx, self.tree[leaf_idx].item(), self.data[leaf_idx - self.capacity + 1]
 
-class PrioritizedReplayBuffer:
-    def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001):
+
+# ---------------------------------------------------------------------------
+# Prioritised replay buffer
+# ---------------------------------------------------------------------------
+
+class PrioritizedReplayBuffer(IReplayBuffer):
+    """
+    Proportional prioritisation replay buffer (Schaul et al., 2015).
+
+    Priority of experience i:
+        p_i = (|δ_i| + ε)^α
+
+    Importance-sampling correction weight:
+        w_i = (1 / N · 1/P(i))^β,   normalised by max(w_j)
+
+    β is annealed from its initial value to 1 over training to remove bias.
+    """
+
+    def __init__(
+        self,
+        capacity: int,
+        alpha: float = 0.6,
+        beta: float = 0.4,
+        beta_increment: float = 0.001,
+    ) -> None:
         self.tree = SumTree(capacity)
         self.alpha = alpha
         self.beta = beta
         self.beta_increment = beta_increment
         self.max_priority = 1.0
 
-    def add(self, sample):
+    def add(self, sample: Any) -> None:
         self.tree.add(self.max_priority, sample)
 
-    def sample(self, batch_size):
-        batch, idxs, priorities = [], [], []
+    def sample(self, batch_size: int) -> Tuple[List[Any], List[int], torch.Tensor]:
         self.beta = min(1.0, self.beta + self.beta_increment)
-        
-        segment = self.tree.tree[0].item() / batch_size
+        total = self.tree.tree[0].item()
+        segment = total / batch_size
+
+        batch, idxs, priorities = [], [], []
         for i in range(batch_size):
             a, b = segment * i, segment * (i + 1)
             v = torch.empty(1).uniform_(a, b).item()
@@ -68,163 +107,220 @@ class PrioritizedReplayBuffer:
             idxs.append(idx)
             priorities.append(p)
 
-        priorities_tensor = torch.tensor(priorities, dtype=torch.float32)
-        sampling_probabilities = priorities_tensor / self.tree.tree[0].item()
-        is_weights = torch.pow(self.tree.capacity * sampling_probabilities, -self.beta)
+        p_tensor = torch.tensor(priorities, dtype=torch.float32)
+        sampling_probs = p_tensor / total
+        is_weights = torch.pow(self.tree.capacity * sampling_probs, -self.beta)
         is_weights /= is_weights.max()
-
         return batch, idxs, is_weights
 
-    def update_priorities(self, idxs, errors):
-        for idx, error in zip(idxs, errors):
-            p = (torch.abs(torch.as_tensor(error)) + 1e-6) ** self.alpha
-            p = p.item()
+    def update_priorities(self, indices: List[int], errors: torch.Tensor) -> None:
+        for idx, err in zip(indices, errors):
+            p = float((torch.abs(torch.as_tensor(err)) + 1e-6) ** self.alpha)
             self.tree.update(idx, p)
             self.max_priority = max(self.max_priority, p)
 
+
+# ---------------------------------------------------------------------------
+# ShivaTrainer
+# ---------------------------------------------------------------------------
+
 class ShivaTrainer:
-    def __init__(self, d_model, action_dim, shiva_model=None, latent_aligner=None, emotional_core=None, capacity=1000000, device="cpu"):
+    """
+    Soft Actor-Critic training loop for the Shiva agent.
+
+    Responsibilities (and only these):
+      • Off-policy SAC critic and actor updates with IS-weighted PER.
+      • Target network soft-updates.
+      • Dream-cycle loss computation (delegated to injected memory + emotions).
+      • External weight ingestion (delegated to injected merge strategy).
+
+    All collaborators are injected; ShivaTrainer never instantiates them.
+
+    Args:
+        policy:          ContinuousSACPolicy (contains backbone, actors, critics).
+        buffer:          IReplayBuffer — replay memory.
+        emotional_core:  EmotionalCore — valence and homeostasis signals.
+        merge_strategy:  IWeightMergeStrategy — how to absorb external weights.
+        gamma:           Discount factor.
+        tau:             Soft-update coefficient.
+        alpha_entropy:   SAC temperature (entropy regularisation coefficient).
+        device:          Torch device string.
+    """
+
+    def __init__(
+        self,
+        policy: ContinuousSACPolicy,
+        buffer: IReplayBuffer,
+        emotional_core: EmotionalCore,
+        merge_strategy: IWeightMergeStrategy,
+        gamma: float = 0.99,
+        tau: float = 0.005,
+        alpha_entropy: float = 0.2,
+        device: str = "cpu",
+    ) -> None:
         self.device = torch.device(device)
-        self.policy = ContinuousSACPolicy(d_model, action_dim).to(self.device)
-        self.target_policy = ContinuousSACPolicy(d_model, action_dim).to(self.device)
-        self.target_policy.load_state_dict(self.policy.state_dict())
-        
-        self.buffer = PrioritizedReplayBuffer(capacity)
-        self.gamma = 0.99
-        self.tau = 0.005  # Soft update coefficient
-        self.alpha_entropy = 0.2  # SAC temperature
-        
+        self.policy = policy.to(self.device)
+
+        # Target policy: deep copy, no grad, soft-updated each step.
+        import copy
+        self.target_policy: ContinuousSACPolicy = copy.deepcopy(policy).to(self.device)
+        for p in self.target_policy.parameters():
+            p.requires_grad_(False)
+
+        self.buffer = buffer
+        self.emotions = emotional_core
+        self.merge_strategy = merge_strategy
+
+        self.gamma = gamma
+        self.tau = tau
+        self.alpha_entropy = alpha_entropy
+
         self.actor_optimizer = torch.optim.Adam(
-            list(self.policy.actor1.parameters()) + 
-            list(self.policy.actor2.parameters()) + 
-            list(self.policy.gate.parameters()), lr=3e-4
+            list(self.policy.actor1.parameters())
+            + list(self.policy.actor2.parameters())
+            + list(self.policy.gate.parameters()),
+            lr=3e-4,
         )
         self.critic_optimizer = torch.optim.Adam(
-            list(self.policy.critic1.parameters()) + 
-            list(self.policy.critic2.parameters()), lr=3e-4
+            self.policy.critic.parameters(), lr=3e-4
         )
-        
-        self.model = shiva_model if shiva_model is not None else self.policy
-        self.aligner = latent_aligner
-        self.emotions = emotional_core
 
-    def dream_cycle(self,batch_size=32):
-        dream_states=self.memory.get_dream_batch(batch_size)
+    # ------------------------------------------------------------------
+    # Dream cycle
+    # ------------------------------------------------------------------
+
+    def dream_cycle(self, batch_size: int = 32) -> Optional[float]:
+        """
+        Replay significant past states and apply a reconstruction loss.
+        Uses the memory attached to policy.memory (IEpisodicMemory) to
+        sample dream states, then computes MSE between model predictions
+        on the last step and the next-step targets in the dream sequence.
+
+          L_dream = MSE(f(z_{T}), z_{1:T})
+        """
+        dream_states = self.policy.memory.get_dream_batch(batch_size)
         if dream_states is None:
-            return
-        dream_states=dream_states.to(self.device)
+            return None
+
+        dream_states = dream_states.to(self.device)
         self.actor_optimizer.zero_grad()
-        valence=self.emotions.get_valence(dream_states[:,-1,:])
-        outputs=self.model(dream_states[:,-1,:])
-        target=dream_states[:,1:,:]
-        dream_loss=F.mse_loss(outputs,target)
+
+        # Valence signal from the final state in each dream sequence.
+        valence = self.emotions.get_valence(dream_states[:, -1, :])
+
+        # Forward pass on the final dream state.
+        outputs, _, _ = self.policy.get_action(dream_states[:, -1, :].unsqueeze(1))
+        targets = dream_states[:, 1:, :]
+
+        dream_loss = F.mse_loss(outputs.unsqueeze(1).expand_as(targets), targets)
         dream_loss.backward()
-        self.optimizer.step()
+        self.actor_optimizer.step()
         return dream_loss.item()
 
-    def _process_batch(self, batch):
-        states = torch.stack([s[0] for s in batch]).to(self.device)
-        actions = torch.stack([s[1] for s in batch]).to(self.device)
-        rewards = torch.tensor([s[2] for s in batch], dtype=torch.float32).unsqueeze(1).to(self.device)
+    # ------------------------------------------------------------------
+    # SAC update step
+    # ------------------------------------------------------------------
+
+    def _process_batch(
+        self, batch: List[Any]
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        states      = torch.stack([s[0] for s in batch]).to(self.device)
+        actions     = torch.stack([s[1] for s in batch]).to(self.device)
+        rewards     = torch.tensor([s[2] for s in batch], dtype=torch.float32).unsqueeze(1).to(self.device)
         next_states = torch.stack([s[3] for s in batch]).to(self.device)
-        dones = torch.tensor([s[4] for s in batch], dtype=torch.float32).unsqueeze(1).to(self.device)
+        dones       = torch.tensor([s[4] for s in batch], dtype=torch.float32).unsqueeze(1).to(self.device)
         return states, actions, rewards, next_states, dones
 
-    def update_step(self, batch_size):
-        if self.buffer.tree.write < batch_size and self.buffer.tree.data[batch_size] is None:
-            return None 
+    def update_step(self, batch_size: int) -> Optional[Tuple[float, float]]:
+        """
+        One SAC update: critic step → actor step → priority update → soft update.
+
+        Critic target (original Bellman formulation):
+            y = r + γ(1−d)·[min(Q̄₁,Q̄₂)(s',ã') − α·log π(ã'|s')]
+
+        Critic loss (IS-weighted):
+            L_c = E[w · (Q_i(s,a) − y)²],   i ∈ {1,2}
+
+        Actor loss (IS-weighted entropy-regularised):
+            L_a = E[w · (α·log π(ã|s) − min(Q₁,Q₂)(s,ã))]
+
+        Returns (critic_loss, actor_loss) or None if buffer is too small.
+        """
         batch, idxs, is_weights = self.buffer.sample(batch_size)
+        if any(s is None for s in batch):
+            return None
+
         states, actions, rewards, next_states, dones = self._process_batch(batch)
         is_weights = is_weights.to(self.device)
 
+        # --- Critic target ---
         with torch.no_grad():
             next_actions, next_log_probs, _ = self.target_policy.get_action(next_states)
-            q1_target, q2_target = self.target_policy.evaluate_q(next_states, next_actions)
-            min_q_target = torch.min(q1_target, q2_target) - self.alpha_entropy * next_log_probs
-            target_q = rewards + (1 - dones) * self.gamma * min_q_target
+            q1_t, q2_t = self.target_policy.evaluate_q(next_states, next_actions)
+            min_q_t = torch.min(q1_t, q2_t) - self.alpha_entropy * next_log_probs
+            target_q = rewards + (1 - dones) * self.gamma * min_q_t
 
+        # --- Critic update ---
         current_q1, current_q2 = self.policy.evaluate_q(states, actions)
-        
-        
-        td_error1 = target_q - current_q1
-        td_error2 = target_q - current_q2
-
-        critic1_loss = (is_weights * F.mse_loss(current_q1, target_q, reduction='none')).mean()
-        critic2_loss = (is_weights * F.mse_loss(current_q2, target_q, reduction='none')).mean()
-        critic_loss = critic1_loss + critic2_loss
-
+        td1 = target_q - current_q1
+        td2 = target_q - current_q2
+        critic_loss = (
+            (is_weights * F.mse_loss(current_q1, target_q, reduction="none")).mean()
+            + (is_weights * F.mse_loss(current_q2, target_q, reduction="none")).mean()
+        )
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # --- Actor update ---
         new_actions, log_probs, _ = self.policy.get_action(states)
         q1_new, q2_new = self.policy.evaluate_q(states, new_actions)
-        min_q_new = torch.min(q1_new, q2_new)
-
-        actor_loss = (is_weights * (self.alpha_entropy * log_probs - min_q_new)).mean()
-
+        actor_loss = (
+            is_weights * (self.alpha_entropy * log_probs - torch.min(q1_new, q2_new))
+        ).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        new_priorities = (torch.abs(td_error1) + torch.abs(td_error2)).detach().cpu() / 2
+        # --- Priority update ---
+        new_priorities = ((torch.abs(td1) + torch.abs(td2)) / 2).detach().cpu()
         self.buffer.update_priorities(idxs, new_priorities)
 
+        # --- Soft target update ---
         self._soft_update()
-        
+
         return critic_loss.item(), actor_loss.item()
 
-    def _soft_update(self):
-        for param, target_param in zip(self.policy.parameters(), self.target_policy.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+    def _soft_update(self) -> None:
+        """
+        Polyak averaging:  θ̄ ← τθ + (1−τ)θ̄
+        """
+        for param, target_param in zip(
+            self.policy.parameters(), self.target_policy.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1.0 - self.tau) * target_param.data
+            )
 
-    def fit_weight_dim(self, W_ext, target_shape):
-        if W_ext.shape == target_shape:
-            return W_ext
-    
-        U, S, Vh = linalg.svd(W_ext, full_matrices=False)
+    # ------------------------------------------------------------------
+    # External weight ingestion (OCP: delegates to injected strategy)
+    # ------------------------------------------------------------------
 
-        U_target = U[:target_shape[0], :min(U.shape[1], target_shape[1])]
-        S_target = torch.diag(S[:min(len(S), target_shape[0], target_shape[1])])
-        Vh_target = Vh[:min(Vh.shape[0], target_shape[0], target_shape[1]), :target_shape[1]]
+    def ingest_external_weights(
+        self,
+        ext_state_dict: Dict[str, torch.Tensor],
+        ext_config: Dict[str, Any],
+    ) -> None:
+        """
+        Absorb an external model's weights into policy using the injected
+        merge strategy, then trigger an emotional homeostasis update to
+        reflect the surprise of new knowledge.
 
-        result = torch.zeros(target_shape)
-        fitted = U_target @ S_target @ Vh_target
-        result[:fitted.shape[0], :fitted.shape[1]] = fitted
-        return result
+        The homeostasis update (action_impact=0.1, environment_surprise=0.8)
+        is preserved from the original codebase.
+        """
+        new_state = self.merge_strategy.merge(self.policy, ext_state_dict, ext_config)
+        self.policy.load_state_dict(new_state, strict=False)
 
-    def average_attention_heads(self, W_mha, src_heads, target_heads):
-        d_model = W_mha.shape[0]
-        d_head = d_model // src_heads
-        
-        reshaped = W_mha.view(src_heads, d_head, d_model)
-        bucket_size = src_heads // target_heads
-        
-        averaged = torch.stack([
-            reshaped[i*bucket_size : (i+1)*bucket_size].mean(dim=0)
-            for i in range(target_heads)
-        ])
-        return averaged.view(-1, d_model)
-
-    def rapid_frankenmerge(self, ext_state_dict, ext_config):
-        if hasattr(self.model, "config"):
-            target_dim = self.model.config.hidden_size #type: ignore
-            target_heads = self.model.config.num_heads #type: ignore
-        else:
-            target_dim = self.model.backbone.d_model
-            target_heads = self.model.backbone.num_heads
-        new_state = {}
-
-        for name, param in ext_state_dict.items():
-            if "attn" in name or "attention" in name:
-                # Handle Attention Head Compression
-                new_state[name] = self.average_attention_heads(param, ext_config['num_heads'], target_heads)
-            else:
-                # Handle Dimensional Fitting
-                target_shape = self.model.state_dict()[name].shape if name in self.model.state_dict() else param.shape
-                new_state[name] = self.fit_weight_dim(param, target_shape)
-
-        self.model.load_state_dict(new_state, strict=False)
-        # Trigger 'Curiosity' update in emotional core after ingestion
-        if self.emotions is not None:
-            self.emotions.update_homeostasis(action_impact=0.1, environment_surprise=0.8)
+        # Curiosity signal: ingesting new weights surprises the system.
+        self.emotions.update_homeostasis(action_impact=0.1, environment_surprise=0.8)
