@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from core.interfaces import IReplayBuffer, IWeightMergeStrategy
 from core.emotional_core import EmotionalCore
 from core.shiva_policy import ContinuousSACPolicy
-
-
+from parasite.ModelWeightParasiticExtraction import ParasiticExtractor
+from locomotion.ModelMovementAndLocomotion import LocomotionEngine, HttpTransport
 # ---------------------------------------------------------------------------
 # SumTree
 # ---------------------------------------------------------------------------
@@ -153,14 +153,17 @@ class ShivaTrainer:
         buffer: IReplayBuffer,
         emotional_core: EmotionalCore,
         merge_strategy: IWeightMergeStrategy,
+        representation_probe: ParasiticExtractor | None = None,
+        probe_frequency: int = 10,
         gamma: float = 0.99,
         tau: float = 0.005,
         alpha_entropy: float = 0.2,
         device: str = "cpu",
+        locomotion_engine: LocomotionEngine | None=None
     ) -> None:
         self.device = torch.device(device)
         self.policy = policy.to(self.device)
-
+        self.locomotion = locomotion_engine
         # Target policy: deep copy, no grad, soft-updated each step.
         import copy
         self.target_policy: ContinuousSACPolicy = copy.deepcopy(policy).to(self.device)
@@ -170,6 +173,10 @@ class ShivaTrainer:
         self.buffer = buffer
         self.emotions = emotional_core
         self.merge_strategy = merge_strategy
+
+        self.probe = representation_probe
+        self.probe_frequency = probe_frequency
+        self.training_step = 0
 
         self.gamma = gamma
         self.tau = tau
@@ -279,8 +286,36 @@ class ShivaTrainer:
             is_weights * (self.alpha_entropy * log_probs - torch.min(q1_new, q2_new))
         ).mean()
         self.actor_optimizer.zero_grad()
-        actor_loss.backward()
+        #actor_loss.backward()
+        total_loss=actor_loss
+        if ( hasattr(self.policy,"swarm") and self.policy.swarm is not None):
+            _, div_loss = self.policy.swarm.step()
+
+            total_actor_loss = ( total_actor_loss+ 0.05 * div_loss)
+
+
+        self.actor_optimizer.zero_grad()
+        if self.probe is not None:
+
+            p_loss=self.probe.compute_loss(states,self.policy.backbone)
+
+            total_loss=(total_loss+.1*p_loss)
+
+        total_loss.backward()
         self.actor_optimizer.step()
+
+        if (
+                self.probe is not None
+                and self.training_step % self.probe_frequency == 0
+        ):
+
+            try:
+                self.probe.distil_step(
+                    states,
+                    self.policy.backbone
+                )
+            except RuntimeError:
+                pass
 
         # --- Priority update ---
         new_priorities = ((torch.abs(td1) + torch.abs(td2)) / 2).detach().cpu()
@@ -301,6 +336,43 @@ class ShivaTrainer:
             target_param.data.copy_(
                 self.tau * param.data + (1.0 - self.tau) * target_param.data
             )
+
+    def migrate_agent(
+            self,
+            destination:str,
+            node_id:str="shiva"
+    ):
+        
+
+        if self.locomotion is None:
+            return None
+
+        return self.locomotion.migrate_out(
+            policy=self.policy,
+            episodic_memory=self.policy.memory,
+            emotional_core=self.emotions,
+            destination=destination,
+            node_id=node_id
+        )
+
+
+    def receive_agent(
+            self,
+            migration_id:str,
+            source:str
+    ):
+
+        if self.locomotion is None:
+            return
+
+        self.locomotion.migrate_in(
+            migration_id=migration_id,
+            source=source,
+            policy=self.policy,
+            episodic_memory=self.policy.memory,
+            emotional_core=self.emotions,
+            device=str(self.device)
+        )
 
     # ------------------------------------------------------------------
     # External weight ingestion (OCP: delegates to injected strategy)

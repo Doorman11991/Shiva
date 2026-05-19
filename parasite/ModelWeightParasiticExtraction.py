@@ -238,3 +238,20 @@ class ParasiticExtractor(IRepresentationProbe, nn.Module):
                 self_._extractor.detach()
 
         return _Ctx(self, host_model, layer_name)
+
+
+    
+    def compute_loss(self,host_input,target_encoder):
+        h_host=self._buffer.read()
+        with torch.no_grad():
+            z_shiva=(
+                target_encoder
+                .forward_pass(host_input)
+                .mean(dim=1)
+            )
+            z_probe=self.probe(h_host)
+
+            return self._loss_fn.compute(
+                z_probe,
+                z_shiva
+            )

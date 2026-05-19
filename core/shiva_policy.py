@@ -123,6 +123,7 @@ class ContinuousSACPolicy(nn.Module):
         memory: IEpisodicMemory,
         critic: DoubleQCritic,
         d_model: int,
+        swarm=None
     ) -> None:
         super().__init__()
         self.backbone = backbone
@@ -130,6 +131,7 @@ class ContinuousSACPolicy(nn.Module):
         self.actor2 = actor2
         self.memory = memory
         self.critic = critic
+        self.swarm=swarm
 
         # Blending gate: maps the conscious latent to a scalar in (0,1).
         self.gate = nn.Sequential(
@@ -154,7 +156,19 @@ class ContinuousSACPolicy(nn.Module):
         z_global = z.mean(dim=1)                        # (B, D)
         z_id = self.memory.get_identity_context(z_global)
         z_conscious = z_global + z_id
+        if self.swarm is not None:
+            self.swarm.update_node_latent(
+                "local_node",
+                z_conscious.mean(dim=0)
+            )
 
+            consensus,_=self.swarm.step()
+
+            z_conscious=(
+                z_conscious
+                +
+                consensus.unsqueeze(0)
+            )
         g = self.gate(z_conscious)                      # (B, 1)
 
         mu1, log_std1 = self.actor1.forward(z_conscious)
