@@ -29,3 +29,5 @@ Beyond functional task-solving, Shiva incorporates **Synthetic Consciousness** a
 2.  **Phase 2**: Dual-Actor SAC & Gating Policy Implementation.
 3.  **Phase 3**: Integration of Affective (Emotional) State Modulators.
 4.  **Phase 4**: Deployment and Zero-Shot Benchmarking across heterogenous domains.
+
+I will keep adding new features to make this more like a human, so that it can work autonomously without anyone's aid. Creating the brain is the hardest part as using pure mathematics we need to build a biological brain.
