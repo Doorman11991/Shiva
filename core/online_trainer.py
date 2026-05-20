@@ -219,7 +219,19 @@ class ShivaTrainer:
         outputs, _, _ = self.policy.get_action(dream_states[:, -1, :].unsqueeze(1))
         targets = dream_states[:, 1:, :]
 
-        dream_loss = F.mse_loss(outputs.unsqueeze(1).expand_as(targets), targets)
+        #dream_loss = F.mse_loss(outputs.unsqueeze(1).expand_as(targets), targets)
+        dream_loss=F.mse_loss(outputs.unsqueeze(1).expand_as(targets),targets)
+
+        if (self.policy.swarm is not None):
+
+            div_loss= self.policy.swarm.get_diversity_loss()
+            dream_loss+=0.02*div_loss
+        if self.probe is not None:
+            try:
+                p_loss=self.probe.compute_loss(dream_states[:,-1,:],self.policy.backbone)
+                dream_loss+=0.05*p_loss
+            except RuntimeError:
+                pass
         dream_loss.backward()
         self.actor_optimizer.step()
         return dream_loss.item()
@@ -289,8 +301,8 @@ class ShivaTrainer:
         #actor_loss.backward()
         total_loss=actor_loss
         if ( hasattr(self.policy,"swarm") and self.policy.swarm is not None):
-            _, div_loss = self.policy.swarm.step()
-
+           # _, div_loss = self.policy.swarm.step()
+            div_loss=self.policy.swarm.get_diversity_loss()
             total_actor_loss = ( total_actor_loss+ 0.05 * div_loss)
 
 

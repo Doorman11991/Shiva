@@ -212,5 +212,11 @@ class SwarmCoordinator(nn.Module):
         div_loss = self.workspace.last_diversity_loss
         return consensus, div_loss if div_loss is not None else torch.tensor(0.0)
 
+    def get_diversity_loss(self):
+
+        div=self.workspace.last_diversity_loss
+
+        return (div if div is not None else torch.tensor(0.0))
+
     def get_node_latent(self, node_id: str) -> torch.Tensor:
         return self._node_modules[node_id].get_conscious_latent()  # type: ignore[attr-defined]
