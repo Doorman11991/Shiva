@@ -1,11 +1,5 @@
 ***
-
-```markdown
 # Shiva AGI: Universal Gated Cognitive Engine (Mark-1)
-
-[![Build & Mathematical Verification](https://img.shields.io/badge/Verification_Matrix-6%20%2F%206%20Passed-success.svg?style=for-the-badge)](https://github.com/aditya-b-007/shiva)
-[![Engine Architecture](https://img.shields.io/badge/Architecture-Gated_Transformer_%2B_Dual_SAC-blue.svg?style=for-the-badge)](https://github.com/aditya-b-007/shiva)
-[![License](https://img.shields.io/badge/License-Apache_2.0-orange.svg?style=for-the-badge)](LICENSE)
 
 Shiva is a domain-agnostic Artificial General Intelligence (AGI) framework built from first principles. It unifies heterogeneous data streams—Robotics, Autonomous Locomotion, and Edge Systems—into a highly integrated **Universal Latent Space ($z \in \mathbb{R}^{512}$)**. Shiva goes beyond typical task-driven policies by implementing synthetic consciousness and affective homeostasis loops, enabling an agent to dynamically regulate its cognitive style, balance optimization goals, and evaluate internal systemic strain.
 
@@ -18,23 +12,15 @@ This repository features a fully verified, production-grade implementation of Sh
 ### A. Swarm Consciousness & Shared Global Workspace (`swarm/`)
 Inspired by Bernard Baars’ *Global Workspace Theory (1988)*, this subsystem models consciousness computationally as a decentralized blackboard. Local specialist processors (`SwarmNode`) express individual conscious latent vectors $z_i \in \mathbb{R}^{512}$. A central aggregator runs multi-head cross-attention over these vectors to build a singular unified consensus representation ($c$), which is then broadcast back to every node via a learnable additive gating network:
 
-$$z_i \leftarrow z_i + \sigma(\alpha_i) \odot c$$
-
 To prevent all agents from converging onto identical representations (cognitive collapse), the architecture enforces a strict contrastive diversity penalty over the sphere-normalized latents:
-
-$$L_{\text{div}} = -\frac{2}{N(N-1)} \sum_{i < j} \| \hat{z}_i - \hat{z}_j \|_2$$
 
 ### B. Parasitic Representation Distillation Engine (`parasite/`)
 The parasitic extraction system performs online representation cloning via non-invasive forward-hook interception. It is designed for contexts where a master "host" model is a compiled black box, a proprietary API, or an incompatible deep architecture. 
 * A lightweight projection network (`ProbeNetwork`) captures intermediate activations ($h$) during inference and routes them to Shiva's latent space: $\hat{z}_{\text{host}} = W_{\text{proj}} \cdot \text{LayerNorm}(h)$.
 * Symmetrical **Noise-Contrastive Estimation (InfoNCE)** loss aligns Shiva's backbone outputs with the host’s geometry, optimizing a tight lower bound on mutual information without ever mutating or exposing the host's underlying parameters:
 
-$$I(\hat{z}_{\text{shiva}}; $\hat{z}_{\text{host}}) \ge \log(B) - L_{\text{InfoNCE}}$$
-
 ### C. Continuous SAC Dual-Actor Policy (`core/`)
 Decisions are processed through an entropy-regularized **Soft Actor-Critic (SAC)** framework featuring a dual-actor setup managed by a soft-gating mechanism. The feature representation ($z$) combines a pooled latent baseline with a recurrent historical context extracted from an episodic memory bank (`EpisodicMemory`). The action space is modeled via a squashed Gaussian policy utilizing a reparameterization trick, correcting log probabilities dynamically across a squashed manifold:
-
-$$\log \pi(a|s) = \log \mathcal{N}(x|\mu,\sigma) - \sum_{k} \log(1 - \tanh^2(x_k) + \epsilon)$$
 
 ---
 
