@@ -1,6 +1,6 @@
 import torch
 # Updated to use relative import to avoid hyphenated directory syntax errors
-from .theoretical_references import ReferenceCrossAttentionWorkspace, compute_reference_diversity_loss
+from .theoretical_reference import ReferenceCrossAttentionWorkspace, compute_reference_diversity_loss
 
 def test_shared_workspace_selective_routing():
     latent_dim = 64

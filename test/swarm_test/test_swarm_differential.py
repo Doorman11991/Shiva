@@ -1,7 +1,7 @@
 import torch
 import unittest
 from swarm.SwarmAlgorithmWorkspace import SwarmCoordinator
-from .theoretical_references import compute_reference_diversity_loss
+from .theoretical_reference import compute_reference_diversity_loss
 
 class TestSwarmDifferentialOracles(unittest.TestCase):
     def setUp(self):

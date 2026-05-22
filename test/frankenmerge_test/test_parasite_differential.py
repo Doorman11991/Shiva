@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import unittest
 from parasite.ModelWeightParasiticExtraction import ParasiticExtractor, ProbeNetwork
-from .theoretical_references import compute_theoretical_infonce
+from .theoretical_reference import compute_theoretical_infonce
 
 class DummyHostModel(nn.Module):
     """A completely frozen, mock third-party architecture to attach hooks onto."""

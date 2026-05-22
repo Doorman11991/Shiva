@@ -1,6 +1,6 @@
 import torch
 import torch.optim as optim
-from .theoretical_references import (
+from .theoretical_reference import (
     compute_theoretical_infonce, 
     compute_spatial_distance_matrix, 
     calculate_matrix_correlation
