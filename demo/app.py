@@ -237,112 +237,148 @@ body::after {
 </div>
 
 <div id="brain-container">
-    <svg viewBox="0 0 500 600" width="80%" height="85%" xmlns="http://www.w3.org/2000/svg">
-        <!-- Top-down brain outline (circuit board style, symmetrical) -->
-        <!-- Outer brain shape -->
-        <path d="M250,30 C310,30 360,45 390,70 C420,95 440,130 445,170 C450,210 445,250 440,290 C435,330 425,370 410,400 C395,430 375,455 350,475 C325,495 295,510 265,515 C255,516 250,517 250,517 C250,517 245,516 235,515 C205,510 175,495 150,475 C125,455 105,430 90,400 C75,370 65,330 60,290 C55,250 50,210 55,170 C60,130 80,95 110,70 C140,45 190,30 250,30 Z"
-              fill="#0a0a12" stroke="#2a3a4a" stroke-width="3"/>
+    <svg viewBox="0 0 600 700" width="85%" height="92%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <radialGradient id="brainTissue" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#1a2238" stop-opacity="0.95"/>
+                <stop offset="60%" stop-color="#0f1525" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#08081a" stop-opacity="1"/>
+            </radialGradient>
+            <radialGradient id="cerebrumGrad"><stop offset="0%" stop-color="#3a5aaf" stop-opacity="0.6"/><stop offset="60%" stop-color="#1a2a5a" stop-opacity="0.4"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="thalamusGrad"><stop offset="0%" stop-color="#e0e8ff" stop-opacity="0.6"/><stop offset="60%" stop-color="#7090c0" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="amygdalaGrad"><stop offset="0%" stop-color="#ff6080" stop-opacity="0.6"/><stop offset="60%" stop-color="#a02040" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="hippocampusGrad"><stop offset="0%" stop-color="#ffc060" stop-opacity="0.6"/><stop offset="60%" stop-color="#a07020" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="hypothalamusGrad"><stop offset="0%" stop-color="#c080ff" stop-opacity="0.6"/><stop offset="60%" stop-color="#7040a0" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="cerebellumGrad"><stop offset="0%" stop-color="#80e060" stop-opacity="0.6"/><stop offset="60%" stop-color="#408020" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="brainstemGrad"><stop offset="0%" stop-color="#60d0ff" stop-opacity="0.6"/><stop offset="60%" stop-color="#2080c0" stop-opacity="0.3"/><stop offset="100%" stop-color="#0a1230" stop-opacity="0"/></radialGradient>
+            <radialGradient id="pulseMarker"><stop offset="0%" stop-color="#fff" stop-opacity="1"/><stop offset="40%" stop-color="#7aa2f7" stop-opacity="0.8"/><stop offset="100%" stop-color="#7aa2f7" stop-opacity="0"/></radialGradient>
+        </defs>
 
-        <!-- Central fissure (divides hemispheres) -->
-        <line x1="250" y1="35" x2="250" y2="510" stroke="#1a2a3a" stroke-width="2.5"/>
+        <ellipse cx="300" cy="340" rx="240" ry="290" fill="url(#brainTissue)" opacity="0.5" filter="url(#softGlow)"/>
 
-        <!-- Circuit traces (PCB-style right-angle connections) -->
-        <!-- Left hemisphere traces -->
-        <path class="signal-path" id="sig-thal-cer" d="M220,260 L220,200 L160,200 L160,140" stroke="#7aa2f7" fill="none" stroke-width="1.5"/>
-        <path class="signal-path" id="sig-thal-amy" d="M220,280 L180,280 L180,320 L140,320" stroke="#f7768e" fill="none" stroke-width="1.5"/>
-        <path class="signal-path" id="sig-hip-cer" d="M160,380 L160,340 L120,340 L120,180 L160,180" stroke="#e0af68" fill="none" stroke-width="1.5"/>
-        <path class="signal-path" id="sig-hyp-cer" d="M240,320 L240,360 L200,360 L200,160 L170,160" stroke="#bb9af7" fill="none" stroke-width="1.5"/>
+        <!-- Two hemispheres -->
+        <path d="M298,80 C260,80 220,90 185,115 C150,140 125,180 110,225 C100,265 95,310 100,355 C108,405 125,455 150,500 C175,545 210,580 250,600 C275,612 290,615 298,615 L298,80 Z"
+              fill="url(#brainTissue)" stroke="#3a5070" stroke-width="2.5" opacity="0.9"/>
+        <path d="M302,80 C340,80 380,90 415,115 C450,140 475,180 490,225 C500,265 505,310 500,355 C492,405 475,455 450,500 C425,545 390,580 350,600 C325,612 310,615 302,615 L302,80 Z"
+              fill="url(#brainTissue)" stroke="#3a5070" stroke-width="2.5" opacity="0.9"/>
+        <path d="M300,82 L300,615" stroke="#1a2540" stroke-width="2.5" opacity="0.8"/>
 
-        <!-- Right hemisphere traces -->
-        <path class="signal-path" id="sig-cer-cbl" d="M280,200 L340,200 L340,360 L370,360" stroke="#9ece6a" fill="none" stroke-width="1.5"/>
-        <path class="signal-path" id="sig-bs-hyp" d="M260,460 L260,400 L260,320" stroke="#7dcfff" fill="none" stroke-width="1.5"/>
-        <path class="signal-path" id="sig-amy-cbl" d="M140,340 L140,400 L300,400 L370,380" stroke="#f7768e" fill="none" stroke-width="1" opacity="0.4"/>
+        <!-- Sulci -->
+        <g opacity="0.4" stroke="#2a3a5a" stroke-width="1.2" fill="none">
+            <path d="M180,130 Q200,150 195,180 Q190,210 210,230"/>
+            <path d="M150,180 Q175,200 170,235 Q165,270 185,290"/>
+            <path d="M125,240 Q150,260 145,295 Q140,330 160,350"/>
+            <path d="M115,300 Q140,320 135,360 Q130,400 150,420"/>
+            <path d="M130,380 Q155,400 150,440 Q145,475 165,495"/>
+            <path d="M170,450 Q195,470 190,505 Q185,540 205,560"/>
+            <path d="M210,150 Q230,170 225,200"/>
+            <path d="M250,200 Q270,215 265,245 Q260,275 275,290"/>
+            <path d="M230,300 Q250,315 245,345 Q240,375 255,395"/>
+            <path d="M250,420 Q270,435 265,465 Q260,495 275,515"/>
+            <path d="M420,130 Q400,150 405,180 Q410,210 390,230"/>
+            <path d="M450,180 Q425,200 430,235 Q435,270 415,290"/>
+            <path d="M475,240 Q450,260 455,295 Q460,330 440,350"/>
+            <path d="M485,300 Q460,320 465,360 Q470,400 450,420"/>
+            <path d="M470,380 Q445,400 450,440 Q455,475 435,495"/>
+            <path d="M430,450 Q405,470 410,505 Q415,540 395,560"/>
+            <path d="M390,150 Q370,170 375,200"/>
+            <path d="M350,200 Q330,215 335,245 Q340,275 325,290"/>
+            <path d="M370,300 Q350,315 355,345 Q360,375 345,395"/>
+            <path d="M350,420 Q330,435 335,465 Q340,495 325,515"/>
+        </g>
 
-        <!-- NODES (circuit board junction points) -->
-        <!-- Small dots along traces -->
-        <circle cx="160" cy="200" r="3" fill="#7aa2f7" opacity="0.6"/>
-        <circle cx="220" cy="200" r="3" fill="#7aa2f7" opacity="0.6"/>
-        <circle cx="180" cy="280" r="3" fill="#f7768e" opacity="0.6"/>
-        <circle cx="160" cy="340" r="3" fill="#e0af68" opacity="0.6"/>
-        <circle cx="120" cy="180" r="3" fill="#e0af68" opacity="0.6"/>
-        <circle cx="340" cy="200" r="3" fill="#9ece6a" opacity="0.6"/>
-        <circle cx="340" cy="360" r="3" fill="#9ece6a" opacity="0.6"/>
-        <circle cx="260" cy="400" r="3" fill="#7dcfff" opacity="0.6"/>
-        <circle cx="200" cy="160" r="3" fill="#bb9af7" opacity="0.6"/>
-        <circle cx="200" cy="360" r="3" fill="#bb9af7" opacity="0.6"/>
+        <!-- Connections -->
+        <g class="connections">
+            <path class="signal-path" id="sig-thal-cer" d="M280,290 Q260,250 220,210 Q200,180 200,150" stroke="#7aa2f7" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-thal-cer2" d="M320,290 Q340,250 380,210 Q400,180 400,150" stroke="#7aa2f7" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-thal-amy" d="M280,310 Q255,330 220,340" stroke="#f7768e" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-hip-cer" d="M195,420 Q220,360 260,300 Q280,250 290,200" stroke="#e0af68" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-hyp-cer" d="M310,360 Q330,310 360,260 Q380,210 380,170" stroke="#bb9af7" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-cer-cbl" d="M395,200 Q430,260 440,330 Q450,400 430,440" stroke="#9ece6a" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-bs-hyp" d="M300,520 Q300,470 300,400" stroke="#7dcfff" fill="none" stroke-width="1.8" filter="url(#softGlow)"/>
+            <path class="signal-path" id="sig-amy-cbl" d="M220,340 Q300,380 405,440" stroke="#f7768e" fill="none" stroke-width="1" opacity="0.3"/>
+        </g>
 
-        <!-- REGION ZONES (hexagonal/angular PCB pads) -->
-        <!-- Cerebrum (top, large, both hemispheres) -->
+        <!-- Animated pulses -->
+        <g class="pulses">
+            <circle r="3" fill="url(#pulseMarker)"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#sig-thal-cer"/></animateMotion></circle>
+            <circle r="3" fill="url(#pulseMarker)"><animateMotion dur="2.8s" repeatCount="indefinite" begin="0.5s"><mpath href="#sig-thal-cer2"/></animateMotion></circle>
+            <circle r="2.5" fill="#e0af68" opacity="0.9"><animateMotion dur="3.2s" repeatCount="indefinite" begin="1.2s"><mpath href="#sig-hip-cer"/></animateMotion></circle>
+            <circle r="2.5" fill="#bb9af7" opacity="0.9"><animateMotion dur="2.7s" repeatCount="indefinite" begin="0.3s"><mpath href="#sig-hyp-cer"/></animateMotion></circle>
+            <circle r="2.5" fill="#9ece6a" opacity="0.9"><animateMotion dur="3s" repeatCount="indefinite" begin="0.8s"><mpath href="#sig-cer-cbl"/></animateMotion></circle>
+            <circle r="2.5" fill="#7dcfff" opacity="0.9"><animateMotion dur="3.5s" repeatCount="indefinite" begin="1.5s"><mpath href="#sig-bs-hyp"/></animateMotion></circle>
+        </g>
+
+        <!-- Region auras -->
+        <ellipse cx="300" cy="150" rx="160" ry="55" fill="url(#cerebrumGrad)" opacity="0.7"/>
+        <ellipse cx="300" cy="295" rx="40" ry="30" fill="url(#thalamusGrad)" opacity="0.7"/>
+        <ellipse cx="200" cy="345" rx="35" ry="35" fill="url(#amygdalaGrad)" opacity="0.7"/>
+        <ellipse cx="195" cy="430" rx="50" ry="35" fill="url(#hippocampusGrad)" opacity="0.7"/>
+        <ellipse cx="305" cy="370" rx="40" ry="30" fill="url(#hypothalamusGrad)" opacity="0.7"/>
+        <ellipse cx="420" cy="450" rx="55" ry="45" fill="url(#cerebellumGrad)" opacity="0.7"/>
+        <ellipse cx="300" cy="540" rx="30" ry="40" fill="url(#brainstemGrad)" opacity="0.7"/>
+
+        <!-- Region cores -->
         <path class="brain-region glow-cerebrum" id="reg-cerebrum"
-              d="M130,80 L180,60 L250,55 L320,60 L370,80 L380,120 L370,160 L320,175 L250,180 L180,175 L130,160 L120,120 Z"
-              fill="#0a0f1e" stroke="#7aa2f7" stroke-width="2"
+              d="M170,90 Q200,75 250,72 Q300,70 350,72 Q400,75 430,90 Q450,110 455,140 Q450,170 430,185 Q400,195 350,195 Q300,198 250,195 Q200,195 170,185 Q150,170 145,140 Q150,110 170,90 Z"
+              fill="rgba(58,90,175,0.15)" stroke="#7aa2f7" stroke-width="2" filter="url(#strongGlow)"
               data-name="Cerebrum" data-desc="Higher cognition: policy, working memory, world model, reasoning chain, goals, inner speech, personality, causal reasoning. The seat of voluntary thought."/>
 
-        <!-- Thalamus (center hub) -->
-        <path class="brain-region glow-thalamus" id="reg-thalamus"
-              d="M225,240 L250,225 L275,240 L275,270 L250,285 L225,270 Z"
-              fill="#0a0a14" stroke="#c0caf5" stroke-width="2"
-              data-name="Thalamus" data-desc="Sensory relay hub: Granite-125m encoder, transformer backbone, attention bottleneck. ALL signals route through here."/>
+        <ellipse class="brain-region glow-thalamus" id="reg-thalamus" cx="300" cy="295" rx="22" ry="18"
+                 fill="rgba(192,202,245,0.15)" stroke="#c0caf5" stroke-width="2" filter="url(#strongGlow)"
+                 data-name="Thalamus" data-desc="Sensory relay hub: Granite-125m text encoder, transformer backbone, attention bottleneck. Every signal enters through here first."/>
 
-        <!-- Amygdala (left, almond-shaped pad) -->
-        <path class="brain-region glow-amygdala" id="reg-amygdala"
-              d="M110,290 L140,275 L165,290 L165,320 L140,340 L110,320 Z"
-              fill="#140a0e" stroke="#f7768e" stroke-width="2"
-              data-name="Amygdala" data-desc="Emotion: valence, fear veto, arousal modulation, habituation. Fast threat detection that bypasses conscious thought."/>
+        <ellipse class="brain-region glow-amygdala" id="reg-amygdala" cx="200" cy="345" rx="22" ry="18"
+                 fill="rgba(247,118,142,0.15)" stroke="#f7768e" stroke-width="2" filter="url(#strongGlow)"
+                 data-name="Amygdala" data-desc="Emotion processing: valence, fear veto, arousal modulation, habituation. Fast threat detection that bypasses conscious thought."/>
 
-        <!-- Hippocampus (left-lower, elongated) -->
         <path class="brain-region glow-hippocampus" id="reg-hippocampus"
-              d="M120,360 L155,350 L190,360 L195,390 L170,410 L130,405 L110,385 Z"
-              fill="#0a140e" stroke="#e0af68" stroke-width="2"
+              d="M165,420 Q175,405 200,402 Q225,400 235,415 Q240,440 220,455 Q190,460 170,448 Q155,435 165,420 Z"
+              fill="rgba(224,175,104,0.15)" stroke="#e0af68" stroke-width="2" filter="url(#strongGlow)"
               data-name="Hippocampus" data-desc="Memory: episodic store/recall, dream replay, active dreaming, boundary detection, cognitive map, temporal abstraction."/>
 
-        <!-- Hypothalamus (center-lower) -->
-        <path class="brain-region glow-hypothalamus" id="reg-hypothalamus"
-              d="M225,300 L250,290 L275,300 L280,330 L260,345 L240,345 L220,330 Z"
-              fill="#0e0a14" stroke="#bb9af7" stroke-width="2"
-              data-name="Hypothalamus" data-desc="Drives: curiosity, energy, safety, engagement, coherence. Generates goals from deficits. Regulates entropy temperature."/>
+        <ellipse class="brain-region glow-hypothalamus" id="reg-hypothalamus" cx="305" cy="370" rx="25" ry="16"
+                 fill="rgba(187,154,247,0.15)" stroke="#bb9af7" stroke-width="2" filter="url(#strongGlow)"
+                 data-name="Hypothalamus" data-desc="Drives and homeostasis: curiosity, energy, safety, engagement, coherence. Generates goals from internal deficits."/>
 
-        <!-- Cerebellum (right-lower, layered look) -->
-        <path class="brain-region glow-cerebellum" id="reg-cerebellum"
-              d="M340,340 L375,330 L400,345 L405,375 L390,400 L355,405 L330,390 L325,365 Z"
-              fill="#0a140e" stroke="#9ece6a" stroke-width="2"
-              data-name="Cerebellum" data-desc="Coordination: action smoothing, skill library, swarm consensus, emotional contagion. Smooth, precise output."/>
+        <g class="brain-region glow-cerebellum" id="reg-cerebellum"
+           data-name="Cerebellum" data-desc="Motor coordination: action smoothing, skill library, swarm consensus, emotional contagion. Smooth, precise output.">
+            <path d="M380,415 Q410,400 445,415 Q470,435 470,470 Q465,500 435,505 Q400,505 380,485 Q365,460 365,440 Q370,420 380,415 Z"
+                  fill="rgba(158,206,106,0.15)" stroke="#9ece6a" stroke-width="2" filter="url(#strongGlow)"/>
+            <path d="M380,440 Q425,435 465,445" stroke="#9ece6a" stroke-width="0.8" opacity="0.5" fill="none"/>
+            <path d="M375,460 Q420,455 470,465" stroke="#9ece6a" stroke-width="0.8" opacity="0.5" fill="none"/>
+            <path d="M380,480 Q420,475 460,485" stroke="#9ece6a" stroke-width="0.8" opacity="0.5" fill="none"/>
+        </g>
 
-        <!-- Brainstem (bottom center, elongated) -->
         <path class="brain-region glow-brainstem" id="reg-brainstem"
-              d="M235,430 L265,430 L275,450 L270,490 L255,505 L245,505 L230,490 L225,450 Z"
-              fill="#060a0e" stroke="#7dcfff" stroke-width="2"
-              data-name="Brainstem" data-desc="Life support: SAC training, gradient health, NaN detection, autosave, LR scheduling. Always running. Never conscious."/>
+              d="M285,510 Q300,505 315,510 Q322,540 318,580 Q310,600 300,602 Q290,600 282,580 Q278,540 285,510 Z"
+              fill="rgba(125,207,255,0.15)" stroke="#7dcfff" stroke-width="2" filter="url(#strongGlow)"
+              data-name="Brainstem" data-desc="Life support: SAC training loop, gradient health, NaN detection, autosave, LR scheduling. Always running, never conscious."/>
 
-        <!-- Additional circuit nodes scattered for PCB feel -->
-        <circle cx="150" cy="120" r="2.5" fill="#7aa2f7" opacity="0.4"/>
-        <circle cx="350" cy="120" r="2.5" fill="#7aa2f7" opacity="0.4"/>
-        <circle cx="100" cy="200" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="400" cy="200" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="300" cy="140" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="200" cy="140" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="330" cy="280" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="170" cy="450" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="330" cy="450" r="2.5" fill="#565f89" opacity="0.3"/>
-        <circle cx="380" cy="260" r="2.5" fill="#565f89" opacity="0.3"/>
-
-        <!-- Short trace stubs (dead-end traces for PCB realism) -->
-        <path d="M150,120 L150,100 L130,100" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M350,120 L370,120 L370,100" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M100,200 L85,200 L85,220" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M400,200 L415,200 L415,180" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M380,260 L400,260 L400,280" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M170,450 L150,450 L150,470" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-        <path d="M330,450 L350,450 L350,470" stroke="#1a2a3a" fill="none" stroke-width="1" opacity="0.4"/>
-
-        <!-- Region labels -->
-        <text x="225" y="125" font-size="10" fill="#7aa2f7" opacity="0.8" text-anchor="middle">CEREBRUM</text>
-        <text x="250" y="260" font-size="8" fill="#c0caf5" opacity="0.8" text-anchor="middle">THALAMUS</text>
-        <text x="138" y="310" font-size="8" fill="#f7768e" opacity="0.8" text-anchor="middle">AMYGDALA</text>
-        <text x="155" y="385" font-size="8" fill="#e0af68" opacity="0.8" text-anchor="middle">HIPPOCAMPUS</text>
-        <text x="250" y="325" font-size="7" fill="#bb9af7" opacity="0.8" text-anchor="middle">HYPOTHAL.</text>
-        <text x="365" y="372" font-size="8" fill="#9ece6a" opacity="0.8" text-anchor="middle">CEREBELLUM</text>
-        <text x="250" y="472" font-size="7" fill="#7dcfff" opacity="0.8" text-anchor="middle">BRAINSTEM</text>
+        <g style="pointer-events:none">
+            <text x="300" y="143" font-size="11" fill="#7aa2f7" text-anchor="middle" font-weight="bold" opacity="0.85" filter="url(#softGlow)">CEREBRUM</text>
+            <text x="300" y="297" font-size="8" fill="#c0caf5" text-anchor="middle" opacity="0.85">THALAMUS</text>
+            <text x="200" y="349" font-size="8" fill="#f7768e" text-anchor="middle" opacity="0.85">AMYGDALA</text>
+            <text x="200" y="432" font-size="8" fill="#e0af68" text-anchor="middle" opacity="0.85">HIPPOCAMPUS</text>
+            <text x="305" y="373" font-size="7" fill="#bb9af7" text-anchor="middle" opacity="0.85">HYPOTHAL.</text>
+            <text x="420" y="460" font-size="9" fill="#9ece6a" text-anchor="middle" opacity="0.85">CEREBELLUM</text>
+            <text x="300" y="546" font-size="7" fill="#7dcfff" text-anchor="middle" opacity="0.85">BRAINSTEM</text>
+        </g>
     </svg>
 
     <div id="tooltip"><h3 id="tt-name"></h3><p id="tt-desc"></p></div>
