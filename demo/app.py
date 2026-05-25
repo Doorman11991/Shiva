@@ -248,7 +248,7 @@ body::after {
 </div>
 
 <div id="brain-container">
-    <svg viewBox="0 0 600 700" width="85%" height="92%" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 600 700" width="60%" height="64%" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
