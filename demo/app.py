@@ -453,6 +453,18 @@ arena_events = []
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.route("/")
+def index():
+    return """<!DOCTYPE html><html><head><title>Chip Demos</title>
+<style>body{background:#0a0a0f;color:#e0e0e0;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;}
+a{color:#7aa2f7;text-decoration:none;font-size:18px;padding:12px 24px;margin:8px;border:1px solid #2a2a3a;border-radius:8px;display:block;transition:all 0.2s;}
+a:hover{background:#1a2a3a;border-color:#7aa2f7;}h1{margin-bottom:24px;}</style></head><body>
+<h1>Chip Demos</h1>
+<a href="/brain">Brain Visualizer</a>
+<a href="/arena">Survival Arena</a>
+<a href="/voice">Voice Assistant</a>
+</body></html>"""
+
 @app.route("/brain")
 def brain_page():
     return BRAIN_HTML
