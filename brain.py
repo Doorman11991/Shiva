@@ -528,9 +528,11 @@ class ChipBrain:
             self.working_mem.decay_step()
 
         # Update homeostasis from novelty and curiosity
+        # Energy passively recovers each tick (resting metabolism)
         self.homeostasis.update({
             "arousal": float(novelty) * 0.1,
             "curiosity": float(curiosity_reward.mean().item()) * 0.05,
+            "energy": 0.005,  # passive recovery each tick
         })
 
         # Collect drives and arbitrate
