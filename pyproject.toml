@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chip-brain"
+version = "1.0.0"
+description = "Brain-anatomical proto-AGI cognitive engine"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10,<3.14"
+authors = [
+    {name = "Chip Contributors"},
+]
+keywords = ["ai", "agi", "cognitive-architecture", "reinforcement-learning", "brain"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.0",
+    "transformers>=4.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/Doorman11991/Chip"
+Repository = "https://github.com/Doorman11991/Chip"
+Changelog = "https://github.com/Doorman11991/Chip/blob/main/CHANGELOG.md"
+
+[project.scripts]
+chip = "run:main"
+
+[tool.setuptools.packages.find]
+include = [
+    "amygdala*",
+    "brainstem*",
+    "cerebellum*",
+    "cerebrum*",
+    "core*",
+    "hippocampus*",
+    "hypothalamus*",
+    "interfaces*",
+    "locomotion*",
+    "parasite*",
+    "thalamus*",
+]
+
+[tool.setuptools]
+py-modules = ["brain", "run"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

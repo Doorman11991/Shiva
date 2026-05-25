@@ -7,11 +7,15 @@ It doesn't generate text. It doesn't call APIs. It *thinks* — in a 512-dimensi
 ## Installation
 
 ```bash
-# Clone the repo
+# Option 1: pip (recommended)
+pip install chip-brain
+
+# Option 2: Docker
+docker run -it ghcr.io/doorman11991/chip:latest
+
+# Option 3: From source
 git clone https://github.com/Doorman11991/Chip.git
 cd Chip
-
-# Install dependencies (just two)
 pip install torch transformers
 
 # (Optional) Copy the env template
@@ -31,7 +35,7 @@ python -c "from brain import ChipBrain; print(ChipBrain())"
 - DirectML (AMD on Windows)
 - MPS (Apple Silicon — automatic)
 
-The first call to the text encoder downloads IBM Granite-125m (~250MB) from HuggingFace. After that it's cached locally and loads in ~5 seconds.
+The first call to the text encoder downloads IBM Granite-125m (~250MB) from HuggingFace. After that it's cached locally and loads in ~5 seconds. The Docker image pre-caches it at build time.
 
 ## Quick Start
 
