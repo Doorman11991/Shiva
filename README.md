@@ -35,6 +35,45 @@ The first call to the text encoder downloads IBM Granite-125m (~250MB) from Hugg
 
 ## Quick Start
 
+```bash
+# Interactive session — just talk to it
+python run.py
+```
+
+```
+  Chip Brain — Interactive Session
+
+  Commands:
+    [text]     Feed an observation to the brain
+    status     Show brain state
+    mood       Show current mood and drives
+    thoughts   Show recent inner speech
+    goals      Show active goals
+    memory     Show memory stats
+    save       Force save to disk
+    quit       Save and exit
+
+you > I notice something strange in the corner of the room.
+
+  [tick 1] mood=Calm, confidence=0.49, |action|=0.42
+  thought: "I notice this feels novel. There is also a sense of risky."
+
+you > thoughts
+
+  [Calm] I notice this feels novel. There is also a sense of risky.
+
+you > status
+
+  tick:       1
+  mood:       Calm
+  top goal:   explore_frontier
+  confidence: 0.49
+  memories:   0
+  wm slots:   3/7
+```
+
+### As a Python library
+
 ```python
 from brain import ChipBrain
 
