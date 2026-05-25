@@ -237,42 +237,79 @@ body::after {
 </div>
 
 <div id="brain-container">
-    <svg viewBox="0 0 600 500" width="90%" height="90%" xmlns="http://www.w3.org/2000/svg">
-        <!-- Signal paths between regions -->
-        <path class="signal-path" id="sig-thal-cer" d="M300,200 C320,180 350,170 380,180" stroke="#c0caf5" fill="none" stroke-width="1"/>
-        <path class="signal-path" id="sig-thal-amy" d="M300,200 C280,220 260,240 250,260" stroke="#f7768e" fill="none" stroke-width="1"/>
-        <path class="signal-path" id="sig-cer-cbl" d="M380,180 C400,220 410,260 390,300" stroke="#9ece6a" fill="none" stroke-width="1"/>
-        <path class="signal-path" id="sig-hip-cer" d="M200,300 C240,270 300,240 380,180" stroke="#e0af68" fill="none" stroke-width="1"/>
-        <path class="signal-path" id="sig-hyp-cer" d="M300,340 C320,300 350,260 380,180" stroke="#bb9af7" fill="none" stroke-width="1"/>
-        <path class="signal-path" id="sig-bs-hyp" d="M300,420 C300,400 300,380 300,340" stroke="#7dcfff" fill="none" stroke-width="1"/>
+    <svg viewBox="0 0 700 500" width="90%" height="90%" xmlns="http://www.w3.org/2000/svg">
+        <!-- Signal paths (neural connections) -->
+        <path class="signal-path" id="sig-thal-cer" d="M350,230 C370,180 400,150 430,140" stroke="#c0caf5" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-thal-amy" d="M330,240 C310,250 290,260 270,270" stroke="#f7768e" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-cer-cbl" d="M450,200 C480,250 500,300 490,350" stroke="#9ece6a" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-hip-cer" d="M280,320 C320,280 370,220 430,160" stroke="#e0af68" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-hyp-cer" d="M340,300 C360,260 390,220 430,170" stroke="#bb9af7" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-bs-hyp" d="M330,400 C335,370 340,340 340,310" stroke="#7dcfff" fill="none" stroke-width="1.5"/>
+        <path class="signal-path" id="sig-amy-cbl" d="M280,280 C350,310 420,330 480,340" stroke="#f7768e" fill="none" stroke-width="1" opacity="0.3"/>
 
-        <!-- Cerebrum (large, top) -->
-        <ellipse class="brain-region glow-cerebrum" id="reg-cerebrum" cx="380" cy="150" rx="140" ry="90" fill="#1a2a4a" stroke="#7aa2f7" stroke-width="1"
-            data-name="Cerebrum" data-desc="Higher cognition: policy, working memory, reasoning, goals, inner speech, personality. The seat of voluntary thought and decision-making."/>
+        <!-- Brain outline (side profile, anatomically shaped) -->
+        <path d="M180,280 C160,240 170,180 200,140 C230,100 280,70 340,60 C400,50 460,60 500,90 C540,120 560,160 560,200 C560,240 550,270 530,290 C520,300 510,310 500,320 C490,330 480,350 490,370 C500,390 490,410 470,410 C450,410 430,400 420,390 C400,380 370,380 350,390 C330,400 310,410 290,400 C270,390 250,370 240,350 C230,330 210,310 200,300 C190,290 185,285 180,280 Z"
+              fill="none" stroke="#2a3a4a" stroke-width="2" opacity="0.6"/>
 
-        <!-- Thalamus (center) -->
-        <ellipse class="brain-region glow-thalamus" id="reg-thalamus" cx="300" cy="210" rx="40" ry="30" fill="#1a1a2e" stroke="#c0caf5" stroke-width="1"
-            data-name="Thalamus" data-desc="Sensory relay: granite text encoder, transformer backbone, attention bottleneck. Every signal enters the brain through here."/>
+        <!-- Cerebrum (large wrinkled top area) -->
+        <path class="brain-region glow-cerebrum" id="reg-cerebrum"
+              d="M210,160 C230,110 290,80 350,75 C410,70 470,80 500,110 C530,140 540,180 530,210 C520,240 490,250 450,240 C410,230 380,220 350,220 C320,220 290,230 260,240 C230,250 210,230 200,200 C190,180 200,170 210,160 Z"
+              fill="#0f1a2e" stroke="#7aa2f7" stroke-width="1.5"
+              data-name="Cerebrum" data-desc="Higher cognition: policy, working memory, world model, reasoning chain, goals, inner speech, personality, causal reasoning. The seat of voluntary thought."/>
 
-        <!-- Hypothalamus (below thalamus) -->
-        <ellipse class="brain-region glow-hypothalamus" id="reg-hypothalamus" cx="300" cy="320" rx="45" ry="25" fill="#1a1a2e" stroke="#bb9af7" stroke-width="1"
-            data-name="Hypothalamus" data-desc="Drives and homeostasis: curiosity, energy, safety, engagement. Generates goals from internal deficits and regulates entropy temperature."/>
+        <!-- Thalamus (small oval, deep center) -->
+        <path class="brain-region glow-thalamus" id="reg-thalamus"
+              d="M330,220 C340,210 360,210 370,220 C380,230 380,245 370,250 C360,260 340,260 330,250 C320,240 320,230 330,220 Z"
+              fill="#12121e" stroke="#c0caf5" stroke-width="1.5"
+              data-name="Thalamus" data-desc="Sensory relay: Granite-125m text encoder, transformer backbone, attention bottleneck. Every signal enters the brain through here first."/>
 
-        <!-- Amygdala (left, mid) -->
-        <ellipse class="brain-region glow-amygdala" id="reg-amygdala" cx="220" cy="260" rx="35" ry="28" fill="#2a1a1e" stroke="#f7768e" stroke-width="1"
-            data-name="Amygdala" data-desc="Emotion processing: valence, fear veto, arousal modulation, habituation. Fast threat detection that can override the cerebrum."/>
+        <!-- Hypothalamus (below thalamus, small) -->
+        <path class="brain-region glow-hypothalamus" id="reg-hypothalamus"
+              d="M320,270 C330,260 355,260 365,270 C375,280 375,300 365,310 C355,320 330,320 320,310 C310,300 310,280 320,270 Z"
+              fill="#14101e" stroke="#bb9af7" stroke-width="1.5"
+              data-name="Hypothalamus" data-desc="Drives and homeostasis: curiosity hunger, energy budget, safety monitoring, entropy temperature. Generates goals from internal deficits."/>
 
-        <!-- Hippocampus (left, lower) -->
-        <ellipse class="brain-region glow-hippocampus" id="reg-hippocampus" cx="190" cy="330" rx="55" ry="30" fill="#1a2a1e" stroke="#e0af68" stroke-width="1"
-            data-name="Hippocampus" data-desc="Memory formation: episodic storage, dream replay, recall into working memory, boundary detection, cognitive map, temporal abstraction."/>
+        <!-- Amygdala (almond-shaped, left of thalamus) -->
+        <path class="brain-region glow-amygdala" id="reg-amygdala"
+              d="M250,255 C260,240 280,235 295,245 C310,255 310,275 295,285 C280,295 260,295 250,280 C240,270 240,260 250,255 Z"
+              fill="#1e0f14" stroke="#f7768e" stroke-width="1.5"
+              data-name="Amygdala" data-desc="Emotion processing: valence network, fear veto, arousal modulation, habituation. Fast threat detection that can override conscious thought."/>
 
-        <!-- Cerebellum (right, lower) -->
-        <ellipse class="brain-region glow-cerebellum" id="reg-cerebellum" cx="420" cy="320" rx="60" ry="45" fill="#1a2a1e" stroke="#9ece6a" stroke-width="1"
-            data-name="Cerebellum" data-desc="Motor coordination: action smoothing, skill library, swarm consensus, emotional contagion. Produces smooth refined output."/>
+        <!-- Hippocampus (seahorse-curved, below amygdala) -->
+        <path class="brain-region glow-hippocampus" id="reg-hippocampus"
+              d="M240,310 C250,295 270,290 290,295 C310,300 320,310 315,325 C310,340 295,350 275,350 C255,350 240,340 235,330 C230,320 235,315 240,310 Z"
+              fill="#0f1a14" stroke="#e0af68" stroke-width="1.5"
+              data-name="Hippocampus" data-desc="Memory formation: episodic storage and recall, dream replay, active dreaming, boundary detection, cognitive map, temporal abstraction."/>
 
-        <!-- Brainstem (bottom center) -->
-        <ellipse class="brain-region glow-brainstem" id="reg-brainstem" cx="300" cy="420" rx="35" ry="50" fill="#0a1a1e" stroke="#7dcfff" stroke-width="1"
-            data-name="Brainstem" data-desc="Life support: SAC training loop, gradient health, NaN detection, persistence, scheduling. Always running, never conscious."/>
+        <!-- Cerebellum (cauliflower shape, back-bottom) -->
+        <path class="brain-region glow-cerebellum" id="reg-cerebellum"
+              d="M440,300 C460,285 490,285 510,300 C530,315 535,340 520,360 C510,375 490,385 470,380 C450,375 435,360 430,340 C425,320 430,305 440,300 Z"
+              fill="#0f1e14" stroke="#9ece6a" stroke-width="1.5"
+              data-name="Cerebellum" data-desc="Motor coordination: action smoothing, skill library, swarm consensus, emotional contagion. Produces smooth, precise output."/>
+
+        <!-- Brainstem (elongated, bottom center) -->
+        <path class="brain-region glow-brainstem" id="reg-brainstem"
+              d="M325,370 C335,360 350,360 360,370 C370,380 370,410 365,430 C360,445 350,450 340,450 C330,450 320,445 318,430 C315,410 315,380 325,370 Z"
+              fill="#0a1418" stroke="#7dcfff" stroke-width="1.5"
+              data-name="Brainstem" data-desc="Life support: SAC training loop, gradient health, NaN detection, autosave/persistence, LR scheduling. Always running, never conscious."/>
+
+        <!-- Sulci/gyri texture lines on cerebrum for realism -->
+        <path d="M250,140 C270,130 300,125 330,130" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M280,155 C310,145 350,142 380,148" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M300,170 C330,163 370,160 410,165" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M320,185 C350,178 390,177 430,183" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M260,195 C280,188 310,186 340,190" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M380,130 C410,120 440,118 470,125" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+        <path d="M420,155 C445,150 470,152 490,160" stroke="#1a2a3a" fill="none" stroke-width="0.8" opacity="0.5"/>
+
+        <!-- Region labels (subtle, small) -->
+        <text x="370" y="155" font-size="9" fill="#7aa2f7" opacity="0.7">cerebrum</text>
+        <text x="335" y="238" font-size="8" fill="#c0caf5" opacity="0.7">thalamus</text>
+        <text x="325" y="295" font-size="8" fill="#bb9af7" opacity="0.7">hypothalamus</text>
+        <text x="252" y="270" font-size="8" fill="#f7768e" opacity="0.7">amygdala</text>
+        <text x="250" y="335" font-size="8" fill="#e0af68" opacity="0.7">hippocampus</text>
+        <text x="455" y="345" font-size="8" fill="#9ece6a" opacity="0.7">cerebellum</text>
+        <text x="315" y="415" font-size="8" fill="#7dcfff" opacity="0.7">brainstem</text>
     </svg>
 
     <div id="tooltip"><h3 id="tt-name"></h3><p id="tt-desc"></p></div>
