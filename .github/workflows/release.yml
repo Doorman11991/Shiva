@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install transformers
+
+      - name: Verify imports
+        run: python -c "from brain import ChipBrain; print('OK')"
+
+      - name: Run smoke test
+        run: |
+          python -c "
+          from brain import ChipBrain
+          brain = ChipBrain(config={'save_every': 0, 'auto_restore': False}).boot()
+          action = brain.tick('Release verification test.')
+          assert action.shape[1] == 4
+          print('Smoke test passed')
+          "
+
+      - name: Create source archive
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          tar -czf chip-${VERSION}.tar.gz \
+            --exclude='.git' \
+            --exclude='__pycache__' \
+            --exclude='.chip_state' \
+            --exclude='*.pyc' \
+            .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: chip-*.tar.gz
+          body_path: CHANGELOG.md
+          generate_release_notes: true
