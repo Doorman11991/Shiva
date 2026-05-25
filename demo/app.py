@@ -144,89 +144,213 @@ BRAIN_HTML = """<!DOCTYPE html>
 <html><head><title>Chip Brain Dashboard</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a0f; color:#e0e0e0; font-family:'Courier New',monospace; overflow:hidden; }
-.container { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; height:100vh; gap:4px; padding:4px; }
-.panel { background:#12121a; border:1px solid #2a2a3a; border-radius:8px; padding:12px; overflow-y:auto; }
-.panel h2 { color:#7aa2f7; font-size:13px; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; }
-.meter { height:6px; background:#1a1a2e; border-radius:3px; margin:4px 0; }
-.meter-fill { height:100%; border-radius:3px; transition:width 0.3s; }
-.mood { font-size:24px; text-align:center; padding:8px; }
-.thought { color:#9ece6a; font-style:italic; padding:4px 0; border-bottom:1px solid #1a1a2e; font-size:12px; }
-.signal { color:#565f89; font-size:11px; padding:2px 0; }
-.stat { display:flex; justify-content:space-between; padding:2px 0; font-size:12px; }
-.stat-val { color:#7aa2f7; }
-#regions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; padding:8px; }
-.region { padding:8px 12px; border-radius:6px; background:#1a1a2e; font-size:11px; transition:all 0.3s; }
-.region.active { background:#1a3a5a; border:1px solid #7aa2f7; box-shadow:0 0 8px rgba(122,162,247,0.3); }
+body { background:#030308; color:#e0e0e0; font-family:'Courier New',monospace; overflow:hidden; height:100vh; display:flex; }
+
+/* Cosmic background */
+body::before {
+    content:''; position:fixed; inset:0; z-index:-1;
+    background: radial-gradient(ellipse at 50% 50%, #0a0a1a 0%, #030308 70%);
+}
+body::after {
+    content:''; position:fixed; inset:0; z-index:-1; opacity:0.3;
+    background-image: radial-gradient(1px 1px at 20px 30px, #fff, transparent),
+                      radial-gradient(1px 1px at 40px 70px, #aaf, transparent),
+                      radial-gradient(1px 1px at 100px 20px, #fff, transparent),
+                      radial-gradient(1px 1px at 180px 90px, #aaf, transparent),
+                      radial-gradient(1px 1px at 250px 60px, #fff, transparent),
+                      radial-gradient(1px 1px at 320px 120px, #aaf, transparent);
+    background-size: 350px 150px;
+}
+
+/* Sidebar */
+#sidebar { width:280px; background:#08080f; border-right:1px solid #1a1a2e; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; z-index:10; }
+#sidebar h2 { color:#7aa2f7; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
+.nav-btn { display:block; padding:10px 14px; background:#0f0f1a; border:1px solid #1a1a2e; border-radius:6px; color:#7aa2f7; text-decoration:none; font-size:12px; transition:all 0.2s; cursor:pointer; text-align:left; }
+.nav-btn:hover, .nav-btn.active { background:#1a2a4a; border-color:#7aa2f7; box-shadow:0 0 12px rgba(122,162,247,0.2); }
+.stat-row { display:flex; justify-content:space-between; font-size:11px; padding:3px 0; }
+.stat-val { color:#7aa2f7; font-weight:bold; }
+.meter { height:4px; background:#1a1a2e; border-radius:2px; margin:2px 0 6px; }
+.meter-fill { height:100%; border-radius:2px; transition:width 0.5s ease; }
+.thought-box { background:#0a0f14; border:1px solid #1a2a2e; border-radius:6px; padding:8px; font-size:10px; color:#9ece6a; font-style:italic; min-height:40px; margin-top:4px; }
+#mood-display { text-align:center; font-size:28px; padding:8px; }
+
+/* Main brain area */
+#brain-container { flex:1; display:flex; align-items:center; justify-content:center; position:relative; }
+
+/* Brain SVG regions */
+.brain-region { cursor:pointer; transition:all 0.3s ease; opacity:0.6; }
+.brain-region:hover { opacity:1; transform:scale(1.05); }
+.brain-region.active { opacity:1; }
+
+/* Glow animations */
+@keyframes pulse-blue { 0%,100%{filter:drop-shadow(0 0 4px #7aa2f7);} 50%{filter:drop-shadow(0 0 16px #7aa2f7) drop-shadow(0 0 30px #4a72c7);} }
+@keyframes pulse-gold { 0%,100%{filter:drop-shadow(0 0 4px #e0af68);} 50%{filter:drop-shadow(0 0 16px #e0af68) drop-shadow(0 0 30px #c09048);} }
+@keyframes pulse-red { 0%,100%{filter:drop-shadow(0 0 4px #f7768e);} 50%{filter:drop-shadow(0 0 16px #f7768e) drop-shadow(0 0 30px #d75070);} }
+@keyframes pulse-white { 0%,100%{filter:drop-shadow(0 0 4px #c0caf5);} 50%{filter:drop-shadow(0 0 14px #c0caf5);} }
+@keyframes pulse-purple { 0%,100%{filter:drop-shadow(0 0 4px #bb9af7);} 50%{filter:drop-shadow(0 0 16px #bb9af7) drop-shadow(0 0 28px #9a7ad7);} }
+@keyframes pulse-green { 0%,100%{filter:drop-shadow(0 0 4px #9ece6a);} 50%{filter:drop-shadow(0 0 12px #9ece6a);} }
+@keyframes pulse-cyan { 0%,100%{filter:drop-shadow(0 0 4px #7dcfff);} 50%{filter:drop-shadow(0 0 14px #7dcfff);} }
+
+.glow-cerebrum { animation: pulse-blue 2s infinite; }
+.glow-hippocampus { animation: pulse-gold 2.5s infinite; }
+.glow-amygdala { animation: pulse-red 1.8s infinite; }
+.glow-thalamus { animation: pulse-white 2.2s infinite; }
+.glow-hypothalamus { animation: pulse-purple 2.4s infinite; }
+.glow-cerebellum { animation: pulse-green 2.6s infinite; }
+.glow-brainstem { animation: pulse-cyan 3s infinite; }
+
+/* Tooltip */
+#tooltip { position:absolute; background:#0a0a14; border:1px solid #2a2a4a; border-radius:6px; padding:10px 14px; font-size:11px; max-width:240px; pointer-events:none; opacity:0; transition:opacity 0.2s; z-index:100; box-shadow:0 4px 20px rgba(0,0,0,0.5); }
+#tooltip.visible { opacity:1; }
+#tooltip h3 { color:#7aa2f7; font-size:12px; margin-bottom:4px; text-transform:uppercase; }
+#tooltip p { color:#a0a0b0; line-height:1.4; }
+
+/* Signal streams (animated lines between regions) */
+.signal-path { stroke-dasharray: 8 4; animation: flow 1s linear infinite; opacity:0.4; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+.signal-path.active { opacity:0.9; stroke-width:2; }
 </style></head><body>
-<div class="container">
-<div class="panel">
-<h2>Brain Regions</h2>
-<div id="regions"></div>
-<div class="mood" id="mood">...</div>
-<div id="drives"></div>
+
+<div id="sidebar">
+    <h2>Chip Brain</h2>
+    <a class="nav-btn active" href="/brain">Brain Visualizer</a>
+    <a class="nav-btn" href="/arena">Survival Arena</a>
+    <a class="nav-btn" href="/voice">Voice Assistant</a>
+
+    <h2 style="margin-top:16px">Mood</h2>
+    <div id="mood-display">...</div>
+
+    <h2>Drives</h2>
+    <div id="drives"></div>
+
+    <h2>Working Memory</h2>
+    <div id="wm-info"></div>
+
+    <h2>Goals</h2>
+    <div id="goal-info"></div>
+
+    <h2>Inner Speech</h2>
+    <div class="thought-box" id="thought-box">waiting for first thought...</div>
+
+    <h2>Stats</h2>
+    <div id="stats-info"></div>
 </div>
-<div class="panel">
-<h2>Inner Speech</h2>
-<div id="thoughts"></div>
+
+<div id="brain-container">
+    <svg viewBox="0 0 600 500" width="90%" height="90%" xmlns="http://www.w3.org/2000/svg">
+        <!-- Signal paths between regions -->
+        <path class="signal-path" id="sig-thal-cer" d="M300,200 C320,180 350,170 380,180" stroke="#c0caf5" fill="none" stroke-width="1"/>
+        <path class="signal-path" id="sig-thal-amy" d="M300,200 C280,220 260,240 250,260" stroke="#f7768e" fill="none" stroke-width="1"/>
+        <path class="signal-path" id="sig-cer-cbl" d="M380,180 C400,220 410,260 390,300" stroke="#9ece6a" fill="none" stroke-width="1"/>
+        <path class="signal-path" id="sig-hip-cer" d="M200,300 C240,270 300,240 380,180" stroke="#e0af68" fill="none" stroke-width="1"/>
+        <path class="signal-path" id="sig-hyp-cer" d="M300,340 C320,300 350,260 380,180" stroke="#bb9af7" fill="none" stroke-width="1"/>
+        <path class="signal-path" id="sig-bs-hyp" d="M300,420 C300,400 300,380 300,340" stroke="#7dcfff" fill="none" stroke-width="1"/>
+
+        <!-- Cerebrum (large, top) -->
+        <ellipse class="brain-region glow-cerebrum" id="reg-cerebrum" cx="380" cy="150" rx="140" ry="90" fill="#1a2a4a" stroke="#7aa2f7" stroke-width="1"
+            data-name="Cerebrum" data-desc="Higher cognition: policy, working memory, reasoning, goals, inner speech, personality. The seat of voluntary thought and decision-making."/>
+
+        <!-- Thalamus (center) -->
+        <ellipse class="brain-region glow-thalamus" id="reg-thalamus" cx="300" cy="210" rx="40" ry="30" fill="#1a1a2e" stroke="#c0caf5" stroke-width="1"
+            data-name="Thalamus" data-desc="Sensory relay: granite text encoder, transformer backbone, attention bottleneck. Every signal enters the brain through here."/>
+
+        <!-- Hypothalamus (below thalamus) -->
+        <ellipse class="brain-region glow-hypothalamus" id="reg-hypothalamus" cx="300" cy="320" rx="45" ry="25" fill="#1a1a2e" stroke="#bb9af7" stroke-width="1"
+            data-name="Hypothalamus" data-desc="Drives and homeostasis: curiosity, energy, safety, engagement. Generates goals from internal deficits and regulates entropy temperature."/>
+
+        <!-- Amygdala (left, mid) -->
+        <ellipse class="brain-region glow-amygdala" id="reg-amygdala" cx="220" cy="260" rx="35" ry="28" fill="#2a1a1e" stroke="#f7768e" stroke-width="1"
+            data-name="Amygdala" data-desc="Emotion processing: valence, fear veto, arousal modulation, habituation. Fast threat detection that can override the cerebrum."/>
+
+        <!-- Hippocampus (left, lower) -->
+        <ellipse class="brain-region glow-hippocampus" id="reg-hippocampus" cx="190" cy="330" rx="55" ry="30" fill="#1a2a1e" stroke="#e0af68" stroke-width="1"
+            data-name="Hippocampus" data-desc="Memory formation: episodic storage, dream replay, recall into working memory, boundary detection, cognitive map, temporal abstraction."/>
+
+        <!-- Cerebellum (right, lower) -->
+        <ellipse class="brain-region glow-cerebellum" id="reg-cerebellum" cx="420" cy="320" rx="60" ry="45" fill="#1a2a1e" stroke="#9ece6a" stroke-width="1"
+            data-name="Cerebellum" data-desc="Motor coordination: action smoothing, skill library, swarm consensus, emotional contagion. Produces smooth refined output."/>
+
+        <!-- Brainstem (bottom center) -->
+        <ellipse class="brain-region glow-brainstem" id="reg-brainstem" cx="300" cy="420" rx="35" ry="50" fill="#0a1a1e" stroke="#7dcfff" stroke-width="1"
+            data-name="Brainstem" data-desc="Life support: SAC training loop, gradient health, NaN detection, persistence, scheduling. Always running, never conscious."/>
+    </svg>
+
+    <div id="tooltip"><h3 id="tt-name"></h3><p id="tt-desc"></p></div>
 </div>
-<div class="panel">
-<h2>Working Memory</h2>
-<div id="wm"></div>
-<h2 style="margin-top:12px">Goals</h2>
-<div id="goals"></div>
-</div>
-<div class="panel">
-<h2>Signals</h2>
-<div id="signals"></div>
-<h2 style="margin-top:12px">Stats</h2>
-<div id="stats"></div>
-</div>
-</div>
+
 <script>
-const REGIONS = ['thalamus','amygdala','hippocampus','hypothalamus','cerebrum','cerebellum','brainstem'];
 const MOOD_EMOJI = {Calm:'😌',Happy:'😊',Sad:'😔',Angry:'😠'};
-document.getElementById('regions').innerHTML = REGIONS.map(r=>`<div class="region" id="r-${r}">${r}</div>`).join('');
+const tooltip = document.getElementById('tooltip');
+const ttName = document.getElementById('tt-name');
+const ttDesc = document.getElementById('tt-desc');
+
+// Hover tooltips
+document.querySelectorAll('.brain-region').forEach(el => {
+    el.addEventListener('mouseenter', (e) => {
+        ttName.textContent = el.dataset.name;
+        ttDesc.textContent = el.dataset.desc;
+        tooltip.classList.add('visible');
+    });
+    el.addEventListener('mousemove', (e) => {
+        tooltip.style.left = (e.clientX - 250) + 'px';
+        tooltip.style.top = (e.clientY + 20) + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+    });
+});
 
 function update(data) {
-    document.getElementById('mood').textContent = (MOOD_EMOJI[data.mood]||'🧠') + ' ' + data.mood;
+    // Mood
+    document.getElementById('mood-display').textContent = (MOOD_EMOJI[data.mood]||'🧠') + ' ' + (data.mood||'?');
+
     // Drives
     let dh = '';
     if(data.homeostasis) Object.entries(data.homeostasis).forEach(([k,v])=>{
         const pct = (v*100).toFixed(0);
         const color = v>0.6?'#9ece6a':v>0.3?'#e0af68':'#f7768e';
-        dh += `<div class="stat"><span>${k}</span><span class="stat-val">${pct}%</span></div><div class="meter"><div class="meter-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        dh += `<div class="stat-row"><span>${k}</span><span class="stat-val">${pct}%</span></div><div class="meter"><div class="meter-fill" style="width:${pct}%;background:${color}"></div></div>`;
     });
     document.getElementById('drives').innerHTML = dh;
-    // Thoughts
-    if(data.inner_speech && data.inner_speech.recent) {
-        let th = data.inner_speech.recent.map(t=>`<div class="thought">${t.text||JSON.stringify(t)}</div>`).join('');
-        document.getElementById('thoughts').innerHTML = th;
-    }
+
     // Working memory
     if(data.working_memory) {
-        let wm = (data.working_memory.slots||[]).map(s=>`<div class="stat"><span>${s.source}</span><span class="stat-val">${s.salience.toFixed(2)}</span></div>`).join('');
-        document.getElementById('wm').innerHTML = wm || '<div class="signal">empty</div>';
+        const wm = data.working_memory;
+        document.getElementById('wm-info').innerHTML = `<div class="stat-row"><span>slots</span><span class="stat-val">${wm.n_slots}/${wm.capacity}</span></div>` +
+            (wm.slots||[]).map(s=>`<div class="stat-row"><span style="color:#565f89">${s.source}</span><span class="stat-val">${s.salience.toFixed(2)}</span></div>`).join('');
     }
+
     // Goals
-    if(data.goal_stack && data.goal_stack.stack) {
-        let g = data.goal_stack.stack.map(s=>`<div class="stat"><span>${s.name}</span><span class="stat-val">t=${s.ticks_active}</span></div>`).join('');
-        document.getElementById('goals').innerHTML = g || '<div class="signal">no active goals</div>';
+    if(data.goal_stack) {
+        const gs = data.goal_stack;
+        document.getElementById('goal-info').innerHTML = gs.is_empty ? '<span style="color:#565f89">no active goals</span>' :
+            gs.stack.map(g=>`<div class="stat-row"><span>${g.name}</span><span class="stat-val">t=${g.ticks_active}</span></div>`).join('');
     }
+
+    // Inner speech
+    if(data.inner_speech && data.inner_speech.recent && data.inner_speech.recent.length) {
+        const last = data.inner_speech.recent[data.inner_speech.recent.length-1];
+        document.getElementById('thought-box').textContent = last.text || JSON.stringify(last);
+    }
+
     // Stats
-    let st = `<div class="stat"><span>tick</span><span class="stat-val">${data.tick}</span></div>`;
-    st += `<div class="stat"><span>confidence</span><span class="stat-val">${(data.meta_cognition?.mean_confidence||0).toFixed(2)}</span></div>`;
-    st += `<div class="stat"><span>memories</span><span class="stat-val">${data.episodic_memory_size||0}</span></div>`;
-    st += `<div class="stat"><span>curiosity</span><span class="stat-val">${(data.curiosity_beta||0).toFixed(4)}</span></div>`;
-    document.getElementById('stats').innerHTML = st;
-    // Pulse active regions
-    REGIONS.forEach(r=>document.getElementById('r-'+r).classList.remove('active'));
-    ['thalamus','cerebrum','amygdala'].forEach(r=>document.getElementById('r-'+r).classList.add('active'));
+    document.getElementById('stats-info').innerHTML =
+        `<div class="stat-row"><span>tick</span><span class="stat-val">${data.tick||0}</span></div>` +
+        `<div class="stat-row"><span>confidence</span><span class="stat-val">${(data.meta_cognition?.mean_confidence||0).toFixed(2)}</span></div>` +
+        `<div class="stat-row"><span>memories</span><span class="stat-val">${data.episodic_memory_size||0}</span></div>` +
+        `<div class="stat-row"><span>place cells</span><span class="stat-val">${data.cognitive_map?.n_cells||0}</span></div>`;
+
+    // Pulse active signal paths
+    document.querySelectorAll('.signal-path').forEach(p=>p.classList.remove('active'));
+    document.getElementById('sig-thal-cer').classList.add('active');
+    if(data.inner_speech?.n_thoughts > 0) document.getElementById('sig-cer-cbl').classList.add('active');
+    if(data.episodic_memory_size > 0) document.getElementById('sig-hip-cer').classList.add('active');
 }
 
 const evtSource = new EventSource('/brain/stream');
 evtSource.onmessage = (e) => { try { update(JSON.parse(e.data)); } catch(err){} };
-</script></body></html>"""
+</script>
+</body></html>"""
 
 
 # ===== ARENA =====
