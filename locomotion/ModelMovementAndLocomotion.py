@@ -1,10 +1,10 @@
-"""
+﻿"""
 Cognitive snapshot serialisation and network-transport infrastructure for
-autonomous Shiva node migration.
+autonomous Chip node migration.
 
 Design rationale
 ~~~~~~~~~~~~~~~~
-A Shiva node's "consciousness" at any point in time is fully defined by:
+A Chip node's "consciousness" at any point in time is fully defined by:
   1. Its model weights (policy backbone, actors, critics, emotional core).
   2. Its episodic memory bank (the deque of significant past experiences).
   3. Its emotional state vector (homeostasis + current mood).
@@ -41,7 +41,7 @@ from typing import Any, Dict, Optional
 from urllib import request as urllib_request
 import torch
 import torch.nn as nn
-from core.interfaces import ICognitiveSnapshot, ILocomotionTransport
+from interfaces.base import ICognitiveSnapshot, ILocomotionTransport
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ class SnapshotMetadata:
 
 class CognitiveSnapshot(ICognitiveSnapshot):
     """
-    A fully self-contained, rehydratable representation of a Shiva node.
+    A fully self-contained, rehydratable representation of a Chip node.
 
     Serialisation format (big-endian, no external dependencies beyond torch):
 
@@ -99,7 +99,7 @@ class CognitiveSnapshot(ICognitiveSnapshot):
     ) -> None:
         self.metadata = metadata
         self._state_bundle = state_bundle
-        self._hmac_secret = hmac_secret or b"shiva-dev-secret"
+        self._hmac_secret = hmac_secret or b"chip-dev-secret"
 
     # ------------------------------------------------------------------
     # ICognitiveSnapshot
@@ -167,7 +167,7 @@ class CognitiveSnapshot(ICognitiveSnapshot):
 
         Raises ValueError on HMAC mismatch or schema version incompatibility.
         """
-        secret = hmac_secret or b"shiva-dev-secret"
+        secret = hmac_secret or b"chip-dev-secret"
 
         # Unpack.
         header_len = int.from_bytes(payload[:4], "big")
@@ -406,7 +406,7 @@ class GrpcTransport(ILocomotionTransport):
     gRPC-based transport for production deployments.
 
     Requires the `grpcio` package and a generated stub from the
-    `shiva_locomotion.proto` service definition:
+    `Chip_locomotion.proto` service definition:
 
         service LocomotionService {
           rpc Migrate (MigrateRequest) returns (MigrateResponse);
@@ -431,7 +431,7 @@ class GrpcTransport(ILocomotionTransport):
     def send(self, snapshot: ICognitiveSnapshot, destination: str) -> str:
         raise NotImplementedError(
             "GrpcTransport.send requires grpcio and a generated proto stub. "
-            "Run `python -m grpc_tools.protoc` on shiva_locomotion.proto first."
+            "Run `python -m grpc_tools.protoc` on Chip_locomotion.proto first."
         )
 
     def receive(self, migration_id: str) -> "CognitiveSnapshot":
@@ -446,7 +446,7 @@ class GrpcTransport(ILocomotionTransport):
 
 class LocomotionEngine:
     """
-    High-level API for migrating a Shiva node to a remote host.
+    High-level API for migrating a Chip node to a remote host.
 
     Usage:
         engine = LocomotionEngine(
@@ -460,7 +460,7 @@ class LocomotionEngine:
             episodic_memory=episodic_memory,
             emotional_core=emotional_core,
             destination="http://10.0.0.5:8080",
-            node_id="shiva-alpha",
+            node_id="Chip-alpha",
         )
 
         # Inbound (receiver side — called on the remote host):
@@ -479,7 +479,7 @@ class LocomotionEngine:
         hmac_secret: Optional[bytes] = None,
     ) -> None:
         self.transport = transport
-        self.hmac_secret = hmac_secret or b"shiva-dev-secret"
+        self.hmac_secret = hmac_secret or b"chip-dev-secret"
 
     def migrate_out(
         self,

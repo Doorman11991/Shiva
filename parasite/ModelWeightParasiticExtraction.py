@@ -1,4 +1,4 @@
-"""
+﻿"""
 Online representation distillation via forward-hook interception.
 
 Design rationale
@@ -16,16 +16,16 @@ writes the host's parameters.  Instead:
   1. A forward hook intercepts the host's intermediate layer activations
      h ∈ ℝ^{B×D_host} during normal inference.
 
-  2. A lightweight ProbeNetwork projects h into Shiva's latent space:
-         ẑ_host = W_proj · LayerNorm(h)     ẑ_host ∈ ℝ^{B×D_shiva}
+  2. A lightweight ProbeNetwork projects h into Chip's latent space:
+         ẑ_host = W_proj · LayerNorm(h)     ẑ_host ∈ ℝ^{B×D_Chip}
 
-  3. Shiva's backbone simultaneously encodes the same input:
-         ẑ_shiva = backbone.forward_pass(x).mean(dim=1)
+  3. Chip's backbone simultaneously encodes the same input:
+         ẑ_Chip = backbone.forward_pass(x).mean(dim=1)
 
   4. An InfoNCE contrastive loss aligns the two representations:
-         L = InfoNCE(ẑ_shiva, ẑ_host, τ)
+         L = InfoNCE(ẑ_Chip, ẑ_host, τ)
 
-     Minimising this loss forces Shiva's latent space to capture whatever
+     Minimising this loss forces Chip's latent space to capture whatever
      structure the host has learned, without touching the host's weights.
 
   5. Optionally, a momentum-updated target encoder (EMA of the probe)
@@ -38,9 +38,9 @@ writes the host's parameters.  Instead:
 Mathematical guarantee
 ~~~~~~~~~~~~~~~~~~~~~~
 InfoNCE is a lower bound on mutual information (van den Oord et al., 2018):
-    I(ẑ_shiva; ẑ_host) ≥ log(B) - L_InfoNCE
+    I(ẑ_Chip; ẑ_host) ≥ log(B) - L_InfoNCE
 
-Minimising L_InfoNCE maximises this lower bound, ensuring Shiva's encoder
+Minimising L_InfoNCE maximises this lower bound, ensuring Chip's encoder
 captures as much of the host's representation as the probe's capacity allows.
 """
 
@@ -51,7 +51,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.hooks import RemovableHandle
-from core.interfaces import IAlignmentLoss, IRepresentationProbe
+from interfaces.base import IAlignmentLoss, IRepresentationProbe
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ class ActivationBuffer:
 
 
 # ---------------------------------------------------------------------------
-# ProbeNetwork: projects host activations into Shiva's latent space
+# ProbeNetwork: projects host activations into Chip's latent space
 # ---------------------------------------------------------------------------
 
 class ProbeNetwork(nn.Module):
@@ -133,7 +133,7 @@ class ParasiticExtractor(IRepresentationProbe, nn.Module):
         # defined in latent_alignment.py.  We import only the concrete
         # default; callers may inject any IAlignmentLoss.
         if loss_fn is None:
-            from core.latent_alignment import InfoNCELoss
+            from thalamus.latent_alignment import InfoNCELoss
             loss_fn = InfoNCELoss(temperature=0.07)
         self._loss_fn = loss_fn
 
@@ -175,14 +175,14 @@ class ParasiticExtractor(IRepresentationProbe, nn.Module):
     ) -> float:
         h_host = self._buffer.read()
         with torch.no_grad():
-            z_shiva = target_encoder.forward_pass(host_input).mean(dim=1)
+            z_Chip = target_encoder.forward_pass(host_input).mean(dim=1)
         z_probe = self.probe(h_host)
         if self.use_ema and self.target_probe is not None:
             with torch.no_grad():
                 z_positive = self.target_probe(h_host)
             loss = self._loss_fn.compute(z_probe, z_positive)
         else:
-            loss = self._loss_fn.compute(z_probe, z_shiva)
+            loss = self._loss_fn.compute(z_probe, z_Chip)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -244,7 +244,7 @@ class ParasiticExtractor(IRepresentationProbe, nn.Module):
     def compute_loss(self,host_input,target_encoder):
         h_host=self._buffer.read()
         with torch.no_grad():
-            z_shiva=(
+            z_Chip=(
                 target_encoder
                 .forward_pass(host_input)
                 .mean(dim=1)
@@ -253,5 +253,5 @@ class ParasiticExtractor(IRepresentationProbe, nn.Module):
 
             return self._loss_fn.compute(
                 z_probe,
-                z_shiva
+                z_Chip
             )

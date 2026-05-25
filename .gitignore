@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+.chip_state/
+.shiva_state/
+*.gguf
+.DS_Store
