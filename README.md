@@ -8,8 +8,8 @@ It doesn't generate text. It doesn't call APIs. It *thinks* — in a 512-dimensi
 
 ```bash
 # Clone the repo
-git clone https://github.com/Doorman11991/Shiva.git
-cd Shiva
+git clone https://github.com/Doorman11991/Chip.git
+cd Chip
 
 # Install dependencies (just two)
 pip install torch transformers
