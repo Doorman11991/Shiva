@@ -4,6 +4,32 @@ Chip is a pure-Python cognitive engine modelled after the human brain. Every mod
 
 It doesn't generate text. It doesn't call APIs. It *thinks* — in a 512-dimensional latent space where observations, emotions, memories, goals, and actions all share the same geometry.
 
+## Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/Doorman11991/Shiva.git
+cd Shiva
+
+# Install dependencies (just two)
+pip install torch transformers
+
+# Verify everything works
+python -c "from brain import ChipBrain; print(ChipBrain())"
+```
+
+**Requirements:**
+- Python 3.10+
+- PyTorch 2.0+
+- HuggingFace Transformers 4.30+
+
+**Optional (for GPU acceleration):**
+- CUDA toolkit (NVIDIA)
+- DirectML (AMD on Windows)
+- MPS (Apple Silicon — automatic)
+
+The first call to the text encoder downloads IBM Granite-125m (~250MB) from HuggingFace. After that it's cached locally and loads in ~5 seconds.
+
 ## Quick Start
 
 ```python
