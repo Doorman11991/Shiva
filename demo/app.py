@@ -178,9 +178,10 @@ body::after {
 #brain-container { flex:1; display:flex; align-items:center; justify-content:center; position:relative; }
 
 /* Brain SVG regions */
-.brain-region { cursor:pointer; transition:all 0.3s ease; opacity:0.6; }
-.brain-region:hover { opacity:1; transform:scale(1.05); }
+.brain-region { cursor:pointer; transition:opacity 0.3s ease, filter 0.3s ease; opacity:0.7; }
+.brain-region:hover { opacity:1; filter:url(#strongGlow) brightness(1.4); }
 .brain-region.active { opacity:1; }
+@keyframes hover-pulse { 0%,100% { opacity:0.85; } 50% { opacity:1; } }
 
 /* Glow animations */
 @keyframes pulse-blue { 0%,100%{filter:drop-shadow(0 0 4px #7aa2f7);} 50%{filter:drop-shadow(0 0 16px #7aa2f7) drop-shadow(0 0 30px #4a72c7);} }
@@ -209,15 +210,25 @@ body::after {
 .signal-path { stroke-dasharray: 8 4; animation: flow 1s linear infinite; opacity:0.4; }
 @keyframes flow { to { stroke-dashoffset: -12; } }
 .signal-path.active { opacity:0.9; stroke-width:2; }
-</style></head><body>
 
-<div id="sidebar">
-    <h2>Chip Brain</h2>
+/* Shared sidebar */
+#nav-sidebar { width:240px; min-width:240px; background:#08080f; border-right:1px solid #1a1a2e; padding:20px 16px; display:flex; flex-direction:column; gap:8px; z-index:50; }
+#nav-sidebar h2 { color:#7aa2f7; font-size:11px; text-transform:uppercase; letter-spacing:3px; margin-bottom:12px; font-weight:bold; }
+.nav-btn { display:block; padding:14px 18px; background:rgba(15,15,26,0.6); border:1px solid #1a1a2e; border-radius:8px; color:#a0c0ff; text-decoration:none; font-size:13px; font-family:'Courier New',monospace; transition:all 0.2s; cursor:pointer; text-align:left; }
+.nav-btn:hover { background:rgba(26,42,74,0.6); border-color:#5070a0; color:#c0d0ff; }
+.nav-btn.active { background:rgba(26,42,74,0.8); border-color:#7aa2f7; color:#c0d8ff; box-shadow:0 0 12px rgba(122,162,247,0.3); }
+</style></head><body>
+<div style="display:flex;height:100vh;width:100vw;">
+<div id="nav-sidebar">
+    <h2>CHIP BRAIN</h2>
     <a class="nav-btn active" href="/brain">Brain Visualizer</a>
     <a class="nav-btn" href="/arena">Survival Arena</a>
     <a class="nav-btn" href="/voice">Voice Assistant</a>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;overflow:auto;position:relative;">
 
-    <h2 style="margin-top:16px">Mood</h2>
+<div id="sidebar">
+    <h2>Mood</h2>
     <div id="mood-display">...</div>
 
     <h2>Drives</h2>
@@ -299,16 +310,44 @@ body::after {
             <path d="M350,420 Q330,435 335,465 Q340,495 325,515"/>
         </g>
 
-        <!-- Connection paths (smooth curves, clipped to brain) -->
+        <!-- Connection pathways (white-matter tracts, realistic anatomical routing) -->
         <g mask="url(#brainMask)">
-            <path class="signal-path" id="sig-thal-cer" d="M285,275 Q260,240 230,210 Q210,185 220,160" stroke="#7aa2f7" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-thal-cer2" d="M315,275 Q340,240 370,210 Q390,185 380,160" stroke="#7aa2f7" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-thal-amy" d="M285,295 Q260,310 235,330" stroke="#f7768e" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-hip-thal" d="M225,415 Q255,360 285,310" stroke="#e0af68" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-hyp-cer" d="M310,355 Q335,310 360,250 Q380,210 360,170" stroke="#bb9af7" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-cer-cbl" d="M380,200 Q415,260 415,330 Q420,395 405,420" stroke="#9ece6a" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-bs-hyp" d="M300,495 Q300,440 305,395" stroke="#7dcfff" fill="none" stroke-width="1.6" opacity="0.7"/>
-            <path class="signal-path" id="sig-amy-hip" d="M210,355 Q210,385 215,415" stroke="#f7768e" fill="none" stroke-width="1.2" opacity="0.4"/>
+            <!-- Thalamus → Cerebrum (left): thalamocortical radiation -->
+            <path class="signal-path" id="sig-thal-cer"
+                  d="M285,275 C260,240 235,210 225,180 C220,160 220,150 225,140"
+                  stroke="#7aa2f7" fill="none" stroke-width="2" opacity="0.75"/>
+            <!-- Thalamus → Cerebrum (right): mirror -->
+            <path class="signal-path" id="sig-thal-cer2"
+                  d="M315,275 C340,240 365,210 375,180 C380,160 380,150 375,140"
+                  stroke="#7aa2f7" fill="none" stroke-width="2" opacity="0.75"/>
+            <!-- Thalamus → Amygdala: subcortical fast path -->
+            <path class="signal-path" id="sig-thal-amy"
+                  d="M280,290 C260,295 240,305 230,315"
+                  stroke="#f7768e" fill="none" stroke-width="1.8" opacity="0.7"/>
+            <!-- Hippocampus → Thalamus (memory recall pathway) -->
+            <path class="signal-path" id="sig-hip-thal"
+                  d="M225,410 C245,380 265,350 280,310"
+                  stroke="#e0af68" fill="none" stroke-width="1.8" opacity="0.7"/>
+            <!-- Amygdala → Hippocampus (emotional memory tagging) -->
+            <path class="signal-path" id="sig-amy-hip"
+                  d="M210,338 C208,360 208,388 213,410"
+                  stroke="#f7768e" fill="none" stroke-width="1.4" opacity="0.5"/>
+            <!-- Hypothalamus → Cerebrum: drive signal up to cortex -->
+            <path class="signal-path" id="sig-hyp-cer"
+                  d="M310,340 C330,300 355,250 365,200 C370,170 370,155 365,140"
+                  stroke="#bb9af7" fill="none" stroke-width="1.8" opacity="0.7"/>
+            <!-- Cerebrum → Cerebellum: corticopontine tract -->
+            <path class="signal-path" id="sig-cer-cbl"
+                  d="M385,180 C410,250 425,320 420,400"
+                  stroke="#9ece6a" fill="none" stroke-width="2" opacity="0.7"/>
+            <!-- Brainstem → Hypothalamus (visceral/autonomic pathway) -->
+            <path class="signal-path" id="sig-bs-hyp"
+                  d="M300,495 C302,460 302,420 304,370"
+                  stroke="#7dcfff" fill="none" stroke-width="1.8" opacity="0.7"/>
+            <!-- Cerebellum → Brainstem: descending motor tract -->
+            <path class="signal-path" id="sig-cbl-bs"
+                  d="M395,460 C370,490 340,510 320,520"
+                  stroke="#9ece6a" fill="none" stroke-width="1.4" opacity="0.5"/>
         </g>
 
         <!-- Animated traveling pulses -->
@@ -465,7 +504,7 @@ function update(data) {
 const evtSource = new EventSource('/brain/stream');
 evtSource.onmessage = (e) => { try { update(JSON.parse(e.data)); } catch(err){} };
 </script>
-</body></html>"""
+</div></div></body></html>"""
 
 
 # ===== ARENA =====
@@ -492,12 +531,22 @@ body { background:#0a0a0f; color:#e0e0e0; font-family:'Courier New',monospace; d
 .stat-val { color:#7aa2f7; }
 #log { font-size:11px; color:#565f89; max-height:200px; overflow-y:auto; margin-top:12px; }
 #log div { padding:1px 0; }
+
+/* Shared sidebar */
+#nav-sidebar { width:240px; min-width:240px; background:#08080f; border-right:1px solid #1a1a2e; padding:20px 16px; display:flex; flex-direction:column; gap:8px; z-index:50; }
+#nav-sidebar h2 { color:#7aa2f7; font-size:11px; text-transform:uppercase; letter-spacing:3px; margin-bottom:12px; font-weight:bold; }
+.nav-btn { display:block; padding:14px 18px; background:rgba(15,15,26,0.6); border:1px solid #1a1a2e; border-radius:8px; color:#a0c0ff; text-decoration:none; font-size:13px; font-family:'Courier New',monospace; transition:all 0.2s; cursor:pointer; text-align:left; }
+.nav-btn:hover { background:rgba(26,42,74,0.6); border-color:#5070a0; color:#c0d0ff; }
+.nav-btn.active { background:rgba(26,42,74,0.8); border-color:#7aa2f7; color:#c0d8ff; box-shadow:0 0 12px rgba(122,162,247,0.3); }
 </style></head><body>
-<div id="nav">
-<a class="nav-icon" href="/brain" title="Brain">🧠</a>
-<a class="nav-icon active" href="/arena" title="Arena">⚔️</a>
-<a class="nav-icon" href="/voice" title="Voice">🎙️</a>
+<div style="display:flex;height:100vh;width:100vw;">
+<div id="nav-sidebar">
+    <h2>CHIP BRAIN</h2>
+    <a class="nav-btn" href="/brain">Brain Visualizer</a>
+    <a class="nav-btn active" href="/arena">Survival Arena</a>
+    <a class="nav-btn" href="/voice">Voice Assistant</a>
 </div>
+<div style="flex:1;display:flex;flex-direction:column;overflow:auto;position:relative;">
 <div id="main">
 <div id="grid"></div>
 <div id="sidebar">
@@ -537,7 +586,7 @@ evtSource.onmessage = (e) => {
     document.getElementById('a-goal').textContent=d.goal||'none';
     if(d.log) { const log=document.getElementById('log'); log.innerHTML=d.log.map(l=>`<div>${l}</div>`).join(''); log.scrollTop=log.scrollHeight; }
 };
-</script></div></body></html>"""
+</script></div></div></div></body></html>"""
 
 
 # ===== VOICE ASSISTANT =====
@@ -562,7 +611,22 @@ h1 { color:#7aa2f7; margin-bottom:20px; }
 #input-row input { flex:1; background:#12121a; border:1px solid #2a2a3a; color:#e0e0e0; padding:10px; border-radius:6px; font-size:14px; }
 #input-row button { padding:10px 20px; background:#7aa2f7; border:none; color:#0a0a0f; border-radius:6px; cursor:pointer; font-weight:bold; }
 #timing { color:#565f89; font-size:11px; margin-top:8px; }
+
+/* Shared sidebar */
+#nav-sidebar { width:240px; min-width:240px; background:#08080f; border-right:1px solid #1a1a2e; padding:20px 16px; display:flex; flex-direction:column; gap:8px; z-index:50; }
+#nav-sidebar h2 { color:#7aa2f7; font-size:11px; text-transform:uppercase; letter-spacing:3px; margin-bottom:12px; font-weight:bold; }
+.nav-btn { display:block; padding:14px 18px; background:rgba(15,15,26,0.6); border:1px solid #1a1a2e; border-radius:8px; color:#a0c0ff; text-decoration:none; font-size:13px; font-family:'Courier New',monospace; transition:all 0.2s; cursor:pointer; text-align:left; }
+.nav-btn:hover { background:rgba(26,42,74,0.6); border-color:#5070a0; color:#c0d0ff; }
+.nav-btn.active { background:rgba(26,42,74,0.8); border-color:#7aa2f7; color:#c0d8ff; box-shadow:0 0 12px rgba(122,162,247,0.3); }
 </style></head><body>
+<div style="display:flex;height:100vh;width:100vw;">
+<div id="nav-sidebar">
+    <h2>CHIP BRAIN</h2>
+    <a class="nav-btn" href="/brain">Brain Visualizer</a>
+    <a class="nav-btn" href="/arena">Survival Arena</a>
+    <a class="nav-btn active" href="/voice">Voice Assistant</a>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;overflow:auto;position:relative;">
 <h1>Chip Voice Assistant</h1>
 <p style="color:#565f89;font-size:12px;margin-bottom:20px">9 cognitive factors computed in real-time, shaping every response</p>
 <div class="factors" id="factors"></div>
@@ -616,7 +680,7 @@ function addMsg(type, text) {
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
-</script></body></html>"""
+</script></div></div></body></html>"""
 
 
 # ---------------------------------------------------------------------------
