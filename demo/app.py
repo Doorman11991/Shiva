@@ -1,13 +1,13 @@
 """
-demo/app.py — Three animated Chip demos in one file.
+demo/app.py - Three animated Chip demos in one file.
 
 Run:
     python demo/app.py
 
 Then open:
-    http://localhost:8080/brain      — Real-time brain visualizer
-    http://localhost:8080/arena      — Survival arena with training
-    http://localhost:8080/voice      — Voice assistant (Chip + LLM + TTS/STT)
+    http://localhost:8080/brain      - Real-time brain visualizer
+    http://localhost:8080/arena      - Survival arena with training
+    http://localhost:8080/voice      - Voice assistant (Chip + LLM + TTS/STT)
 
 Dependencies (beyond chip-brain):
     pip install flask edge-tts
@@ -191,14 +191,31 @@ body::after {
 #demo-controls button:hover { background:rgba(26,42,74,0.9); border-color:#7aa2f7; }
 #demo-overlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.5s; z-index:20; }
 #demo-overlay.active { opacity:1; }
-#demo-label-bar { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(8,8,15,0.92); border:1px solid #7aa2f7; border-radius:8px; padding:10px 22px; color:#c0d8ff; font-family:'Courier New',monospace; font-size:15px; font-weight:bold; letter-spacing:1px; box-shadow:0 0 24px rgba(122,162,247,0.4); }
+#demo-label-bar { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(8,8,15,0.92); border:1px solid #7aa2f7; border-radius:8px; padding:10px 22px; color:#c0d8ff; font-family:'Courier New',monospace; font-size:15px; font-weight:bold; letter-spacing:1px; box-shadow:0 0 24px rgba(122,162,247,0.4); transition:opacity 0.4s; }
 #demo-label-bar:empty { display:none; }
-#demo-thought-bubble { position:absolute; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(15,30,15,0.92); border:1px solid #9ece6a; border-radius:14px; padding:12px 22px; color:#c0e0a0; font-family:'Courier New',monospace; font-size:13px; font-style:italic; max-width:60%; text-align:center; box-shadow:0 0 20px rgba(158,206,106,0.3); }
-#demo-thought-bubble:empty { display:none; }
-#demo-thought-bubble:has(span:empty) { display:none; }
+
+/* Subtitle bar - sentence-level captions synced to TTS audio */
+#demo-subtitle-bar { position:absolute; bottom:90px; left:8%; right:8%; min-height:60px; padding:14px 24px; background:rgba(6,6,12,0.88); border:1px solid #2a3a5a; border-left:3px solid #7aa2f7; border-radius:6px; color:#dde6f5; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:17px; line-height:1.45; text-align:center; max-width:80%; margin:0 auto; box-shadow:0 0 28px rgba(0,0,0,0.6), 0 0 18px rgba(122,162,247,0.12); backdrop-filter:blur(4px); display:none; }
+#demo-subtitle-bar.visible { display:block; }
+#demo-subtitle-bar .sub-line { opacity:0; animation:sub-fade 0.35s ease forwards; }
+@keyframes sub-fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+#demo-loading { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(8,8,15,0.95); border:1px solid #7aa2f7; border-radius:10px; padding:18px 30px; color:#c0d8ff; font-family:'Courier New',monospace; font-size:14px; box-shadow:0 0 30px rgba(122,162,247,0.4); display:none; z-index:60; }
+#demo-loading.visible { display:block; }
+#demo-loading::after { content:''; display:inline-block; width:14px; height:14px; margin-left:10px; border:2px solid #7aa2f7; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
 #demo-progress-container { position:absolute; bottom:30px; left:10%; right:10%; height:4px; background:rgba(20,20,40,0.6); border-radius:2px; overflow:hidden; }
-#demo-progress { height:100%; background:linear-gradient(90deg, #7aa2f7, #bb9af7, #f7768e); transition:width 0.1s; }
+#demo-progress { height:100%; background:linear-gradient(90deg, #7aa2f7, #bb9af7, #f7768e); transition:width 0.4s ease; }
 #demo-time { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:#565f89; font-family:'Courier New',monospace; font-size:11px; }
+
+/* Scene-active region highlight: pulsing ring around the current scene's regions */
+.brain-region.demo-active ellipse,
+.brain-region.demo-active > ellipse:first-child { stroke-width:3.5; }
+
+/* Halo burst for scene transitions */
+@keyframes halo-burst { 0% { stroke-width:2; opacity:0.85; } 60% { stroke-width:8; opacity:0.4; } 100% { stroke-width:2; opacity:0.85; } }
+.brain-region.demo-active { animation:demo-pulse 1.4s ease-in-out infinite, halo-burst 2.2s ease-out 1; }
 
 /* Glow animations */
 @keyframes pulse-blue { 0%,100%{filter:drop-shadow(0 0 4px #7aa2f7);} 50%{filter:drop-shadow(0 0 16px #7aa2f7) drop-shadow(0 0 30px #4a72c7);} }
@@ -272,7 +289,8 @@ body::after {
     </div>
     <div id="demo-overlay">
         <div id="demo-label-bar"><span id="demo-label"></span></div>
-        <div id="demo-thought-bubble"><span id="demo-thought"></span></div>
+        <div id="demo-loading">Loading first chapter</div>
+        <div id="demo-subtitle-bar"></div>
         <div id="demo-progress-container"><div id="demo-progress"></div></div>
         <div id="demo-time"></div>
     </div>
@@ -390,7 +408,7 @@ body::after {
         </g>
 
         <!--
-            REGIONS — each defined by a single (cx, cy) so aura and core are perfectly aligned.
+            REGIONS - each defined by a single (cx, cy) so aura and core are perfectly aligned.
             All positions verified to fit inside the brain outline.
             Layout (top to bottom):
                 Cerebrum    : (300, 145)  large, top
@@ -534,27 +552,137 @@ const evtSource = new EventSource('/brain/stream');
 evtSource.onmessage = (e) => { try { update(JSON.parse(e.data)); } catch(err){} };
 
 // ============================================================
-// DEMO SLIDESHOW — auto-narrated tour, audio-driven timing
-// Each scene plays its narration to completion before advancing.
-// Audio is pre-generated on demo start so playback is gapless.
+// DEMO SLIDESHOW - narrated tour of how a real brain maps to Chip
+// Each scene is one TTS request (one chunk). Scene 0 plays the moment it
+// finishes loading; later scenes prefetch in the background while the
+// current one plays, so playback feels continuous instead of front-loaded.
+// Subtitles are sentence-level and ride on the audio's currentTime, so
+// what you hear and what you read stay in lockstep.
 // ============================================================
 
 const SCENES = [
-    { narr: "This is Chip's cognitive architecture. A brain made of code.", regions: [], label: "Chip's Cognitive Architecture" },
-    { narr: "The Cerebrum handles planning and goals.", regions: ["cerebrum"], label: "Cerebrum: Planning and Goals" },
-    { narr: "The Amygdala processes emotion and valence.", regions: ["amygdala"], label: "Amygdala: Emotion and Valence" },
-    { narr: "The Hippocampus forms and recalls memories.", regions: ["hippocampus"], label: "Hippocampus: Memory" },
-    { narr: "The Hypothalamus drives motivation through homeostatic needs.", regions: ["hypothalamus"], label: "Hypothalamus: Drives" },
-    { narr: "The Thalamus integrates sensory input and attention.", regions: ["thalamus"], label: "Thalamus: Sensory Hub" },
-    { narr: "Watch a thought form in real time.", regions: ["thalamus"], label: "Observation enters the Thalamus", thought: "Something new is happening." },
-    { narr: "The Amygdala reacts emotionally.", regions: ["thalamus", "amygdala"], label: "Emotional response", thought: "This feels significant." },
-    { narr: "The Hippocampus searches for similar memories.", regions: ["amygdala", "hippocampus"], label: "Memory recall", thought: "Have I felt this before?" },
-    { narr: "The Cerebrum forms a plan.", regions: ["hippocampus", "cerebrum"], label: "Goal formation", thought: "I should investigate further." },
-    { narr: "The Hypothalamus reinforces motivation.", regions: ["cerebrum", "hypothalamus"], label: "Motivational drive", thought: "Curiosity is rising." },
-    { narr: "When new evidence contradicts a belief, it rotates smoothly through spherical linear interpolation.", regions: ["cerebrum", "hippocampus"], label: "SLERP Belief Revision" },
-    { narr: "All thought happens in a five hundred and twelve dimensional latent space. A constellation of meaning.", regions: ["thalamus", "cerebrum"], label: "Latent Space (512-D)" },
-    { narr: "Emotion modulates everything. Frustration fades as curiosity takes over.", regions: ["amygdala", "hypothalamus"], label: "Emotional Homeostasis" },
-    { narr: "Persistent memory. Intrinsic motivation. Emotional homeostasis. This is how Chip thinks.", regions: ["cerebrum","amygdala","hippocampus","hypothalamus","thalamus","cerebellum","brainstem"], label: "This is how Chip thinks" },
+    {
+        title: "Where every thought begins",
+        regions: [],
+        sentences: [
+            "Every thought you have starts the same way.",
+            "A signal arrives, gets routed, gets felt, gets remembered, and finally turns into something you do.",
+            "Chip follows that exact path.",
+            "What you are looking at is not a chatbot. It is a brain.",
+            "Each region has its own job, and they pass typed messages to each other every tick."
+        ]
+    },
+    {
+        title: "Thalamus: the gate everything passes through",
+        regions: ["thalamus"],
+        sentences: [
+            "In humans, the thalamus sits in the middle of the brain like a switchboard.",
+            "Nearly every sensory signal in your body, except smell, lands there first before reaching the cortex.",
+            "It filters. It decides what is worth your attention this second.",
+            "Chip's thalamus does the same job in software.",
+            "Incoming text gets encoded by Granite-125m into a 512-dimensional vector, runs through a transformer backbone, and an attention bottleneck keeps only the strongest features.",
+            "The rest is discarded the way you stop noticing the feel of your own clothes a few seconds after putting them on."
+        ]
+    },
+    {
+        title: "Amygdala: the fast lane for emotion",
+        regions: ["thalamus", "amygdala"],
+        sentences: [
+            "Out of the thalamus, two paths fire at once.",
+            "One goes the slow way, up to the cortex for careful thought.",
+            "The other goes straight to the amygdala in a few milliseconds.",
+            "That low road is why you flinch from a snake on the trail before you consciously register it is a snake.",
+            "Chip's amygdala scores valence in the same shortcut, and it can veto an action before the planner has even finished thinking.",
+            "It also habituates. Show it the same input twenty times and the response fades, the same way your brain stops reacting to a ticking clock."
+        ]
+    },
+    {
+        title: "Hippocampus: turning experience into memory",
+        regions: ["amygdala", "hippocampus"],
+        sentences: [
+            "The hippocampus is shaped like a seahorse, which is where its name comes from.",
+            "It binds together where you were, who was with you, and what you felt, then writes that bundle to long-term memory while you sleep.",
+            "Patient H.M. had his removed in 1953 and could never form a new conscious memory again.",
+            "Chip's hippocampus stores each episode indexed by its latent vector.",
+            "When new input arrives, it pulls the three most relevant past episodes back into working memory through cosine similarity.",
+            "It also watches for prediction errors and marks event boundaries, which is why you remember a car crash but forget the drive there."
+        ]
+    },
+    {
+        title: "Hypothalamus: the engine of motivation",
+        regions: ["hippocampus", "hypothalamus"],
+        sentences: [
+            "Beneath the thalamus sits the hypothalamus, no bigger than an almond.",
+            "It runs almost every drive you have. Hunger, thirst, body temperature, sleep, the urge to bond, the urge to flee.",
+            "Without it you would feel nothing pushing you toward anything.",
+            "Chip's hypothalamus tracks six drives instead of dozens.",
+            "Energy, curiosity, safety, social engagement, coherence, and novelty.",
+            "When any one of them drifts out of range, the hypothalamus generates a goal automatically.",
+            "Curiosity reward comes straight from how surprised the world model was, which is the same dopaminergic loop you feel when something genuinely interesting happens."
+        ]
+    },
+    {
+        title: "Cerebrum: planning, language, identity",
+        regions: ["hypothalamus", "cerebrum"],
+        sentences: [
+            "The cerebrum is the wrinkled outer layer most people picture when they hear the word brain.",
+            "It holds plans, language, autobiographical self, and most of what you would call you.",
+            "Chip's cerebrum keeps seven working-memory slots, the same magic number George Miller wrote about in 1956.",
+            "A dual-actor soft actor-critic policy picks the next move.",
+            "A reasoning chain only fires when meta-cognitive confidence drops, which keeps the lights on without burning compute on easy decisions.",
+            "Inner speech runs in plain English, gets re-encoded back into the latent space, and anchors a stable identity across thousands of ticks."
+        ]
+    },
+    {
+        title: "Cerebellum: the timing of skilled action",
+        regions: ["cerebrum", "cerebellum"],
+        sentences: [
+            "Behind and below the cerebrum sits the cerebellum.",
+            "It contains roughly half of all the neurons in the human brain, packed tight under the back of the skull.",
+            "People used to think it only handled balance. We now know it shapes almost any skilled, rapid action.",
+            "A tennis swing. Speech timing. The micro-corrections in your fingers when you pick up a coffee cup.",
+            "Chip's cerebellum smooths every chosen action with an exponential moving average so the output stops looking robotic.",
+            "It also maintains a small skill library, so similar problems reuse the same motor primitives instead of being solved from scratch."
+        ]
+    },
+    {
+        title: "Brainstem: silent life support",
+        regions: ["cerebellum", "brainstem"],
+        sentences: [
+            "The brainstem keeps you alive while you are not paying attention.",
+            "Heartbeat. Breathing. Sleep cycles. The reflex that makes you blink before you know why.",
+            "You never thank it. You never even notice it.",
+            "Chip's brainstem runs the SAC update, clips gradients, watches for NaNs, and writes a signed HMAC-SHA256 snapshot to disk every hundred ticks.",
+            "Pull the plug, restart the process, and Chip wakes up exactly where it left off, with the same drives, the same memories, the same sense of self."
+        ]
+    },
+    {
+        title: "One tick, end to end",
+        regions: ["thalamus", "amygdala", "hippocampus", "hypothalamus", "cerebrum", "cerebellum", "brainstem"],
+        sentences: [
+            "Watch them work together for a moment.",
+            "A new sentence lands at the thalamus and gets encoded.",
+            "The amygdala scores its valence in parallel.",
+            "The hippocampus pulls back any relevant past episodes.",
+            "The hypothalamus checks whether some drive has gone hungry.",
+            "The cerebrum chooses a goal and an action.",
+            "The cerebellum smooths the action vector before it leaves.",
+            "The brainstem updates the policy and saves state.",
+            "Input to output takes about one tick. No region imports another. They only publish typed signals on a shared bus, so any single piece can fail without dragging the rest down with it."
+        ]
+    },
+    {
+        title: "What makes Chip different",
+        regions: ["cerebrum", "hippocampus", "amygdala"],
+        sentences: [
+            "What separates Chip from a language model is structure, not scale.",
+            "Belief revision happens through spherical linear interpolation, so a contradiction rotates the embedding instead of snapping it.",
+            "Every hundred ticks, Chip writes a short description of itself, re-encodes it, and anchors that token to keep identity from drifting.",
+            "Memory replay does more than rehearse old episodes. It searches alternative trajectories from key decision points and keeps the better ones as synthetic memories.",
+            "This is not a model that wakes up only when prompted.",
+            "It runs whether you are watching or not, and it remembers what you said yesterday."
+        ]
+    }
 ];
 
 const VOICE = "en-US-GuyNeural";
@@ -562,8 +690,92 @@ const VOICE = "en-US-GuyNeural";
 let demoActive = false;
 let demoVoiceEnabled = true;
 let demoCurrentScene = -1;
-let demoAudioCache = [];   // pre-generated Audio objects per scene
-let demoPlaybackToken = 0; // increments on each start/stop to invalidate stale callbacks
+let demoPlaybackToken = 0;          // increments on start/stop to invalidate stale callbacks
+let demoSubtitleDetach = null;       // function to remove timeupdate listener
+let demoLoader = null;               // TTSLoader instance, recreated per run
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Progressive TTS loader. One Audio per scene, lazy + idempotent.
+class TTSLoader {
+    constructor(scenes, voice) {
+        this.scenes = scenes;
+        this.voice = voice;
+        this.audios = new Array(scenes.length).fill(null);
+        this.promises = new Array(scenes.length).fill(null);
+    }
+
+    _narrationFor(idx) {
+        return this.scenes[idx].sentences.join(' ');
+    }
+
+    load(idx) {
+        if (idx < 0 || idx >= this.scenes.length) return Promise.resolve(null);
+        if (this.audios[idx]) return Promise.resolve(this.audios[idx]);
+        if (this.promises[idx]) return this.promises[idx];
+
+        const url = '/tts?text=' + encodeURIComponent(this._narrationFor(idx)) + '&voice=' + encodeURIComponent(this.voice);
+        const audio = new Audio(url);
+        audio.preload = 'auto';
+
+        this.promises[idx] = new Promise((resolve, reject) => {
+            const onReady = () => { this.audios[idx] = audio; resolve(audio); };
+            const onErr = (e) => { this.promises[idx] = null; reject(e); };
+            audio.addEventListener('canplaythrough', onReady, { once: true });
+            audio.addEventListener('loadeddata', onReady, { once: true });
+            audio.addEventListener('error', onErr, { once: true });
+            audio.load();
+        });
+        return this.promises[idx];
+    }
+
+    prefetch(idx) {
+        this.load(idx).catch(() => {});
+    }
+
+    dispose() {
+        for (const a of this.audios) {
+            if (a) { try { a.pause(); a.src = ''; } catch (e) {} }
+        }
+        this.audios = [];
+        this.promises = [];
+    }
+}
+
+function attachSubtitles(audio, sentences) {
+    const bar = document.getElementById('demo-subtitle-bar');
+    bar.classList.add('visible');
+    bar.innerHTML = '<div class="sub-line">' + escapeHtml(sentences[0]) + '</div>';
+
+    const lengths = sentences.map(s => Math.max(1, s.length));
+    const total = lengths.reduce((a, b) => a + b, 0);
+    let cum = 0;
+    const boundaries = lengths.map(l => { cum += l; return cum / total; });
+
+    let lastIdx = 0;
+    const handler = () => {
+        const dur = audio.duration;
+        if (!isFinite(dur) || dur === 0) return;
+        const frac = audio.currentTime / dur;
+        let idx = boundaries.findIndex(b => frac < b);
+        if (idx === -1) idx = sentences.length - 1;
+        if (idx !== lastIdx) {
+            lastIdx = idx;
+            bar.innerHTML = '<div class="sub-line">' + escapeHtml(sentences[idx]) + '</div>';
+        }
+    };
+    audio.addEventListener('timeupdate', handler);
+    return () => audio.removeEventListener('timeupdate', handler);
+}
+
+function clearSubtitles() {
+    if (demoSubtitleDetach) { try { demoSubtitleDetach(); } catch (e) {} demoSubtitleDetach = null; }
+    const bar = document.getElementById('demo-subtitle-bar');
+    bar.classList.remove('visible');
+    bar.innerHTML = '';
+}
 
 function toggleDemo() {
     if (demoActive) { stopDemo(); } else { startDemo(); }
@@ -582,96 +794,126 @@ async function startDemo() {
     demoCurrentScene = -1;
     demoPlaybackToken++;
     const myToken = demoPlaybackToken;
+
     document.getElementById('demo-overlay').classList.add('active');
     document.getElementById('demo-btn').textContent = '⏸ Stop Demo';
-    document.getElementById('demo-label').textContent = 'Loading narration...';
-
-    // Pre-generate all scene audio in parallel
-    demoAudioCache = SCENES.map(s => {
-        const a = new Audio('/tts?text=' + encodeURIComponent(s.narr) + '&voice=' + VOICE);
-        a.preload = 'auto';
-        return a;
-    });
-
-    // Wait for first audio to be ready before starting
-    try { await waitForAudio(demoAudioCache[0]); } catch (e) {}
-    if (myToken !== demoPlaybackToken) return;  // user stopped while loading
-
+    document.getElementById('demo-loading').classList.add('visible');
+    document.getElementById('demo-loading').textContent = 'Loading first chapter';
     document.getElementById('demo-label').textContent = '';
-    playScene(0, myToken);
-}
 
-function waitForAudio(audio) {
-    return new Promise((resolve, reject) => {
-        if (audio.readyState >= 3) return resolve();
-        audio.addEventListener('canplaythrough', resolve, { once: true });
-        audio.addEventListener('error', reject, { once: true });
-        // Trigger loading if it hasn't started
-        audio.load();
-    });
+    demoLoader = new TTSLoader(SCENES, VOICE);
+
+    // Load scene 0 first; kick off scene 1 & 2 in parallel so the queue stays warm.
+    try {
+        await demoLoader.load(0);
+        demoLoader.prefetch(1);
+        demoLoader.prefetch(2);
+    } catch (e) {
+        console.warn('TTS pre-load failed for scene 0:', e);
+    }
+    if (myToken !== demoPlaybackToken) return;
+
+    document.getElementById('demo-loading').classList.remove('visible');
+    playScene(0, myToken);
 }
 
 function stopDemo() {
     demoActive = false;
-    demoPlaybackToken++;  // invalidate any pending callbacks
+    demoPlaybackToken++;
     document.getElementById('demo-overlay').classList.remove('active');
     document.getElementById('demo-btn').textContent = '▶ Play Demo';
+    document.getElementById('demo-loading').classList.remove('visible');
     document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
     document.getElementById('demo-label').textContent = '';
-    document.getElementById('demo-thought').textContent = '';
+    clearSubtitles();
     if (window._currentTtsAudio) {
-        window._currentTtsAudio.pause();
+        try { window._currentTtsAudio.pause(); } catch (e) {}
         window._currentTtsAudio = null;
     }
-    demoAudioCache.forEach(a => { try { a.pause(); } catch(e){} });
-    demoAudioCache = [];
+    if (demoLoader) { demoLoader.dispose(); demoLoader = null; }
 }
 
-function playScene(idx, token) {
+async function playScene(idx, token) {
     if (!demoActive || token !== demoPlaybackToken) return;
     if (idx >= SCENES.length) { stopDemo(); return; }
 
     const scene = SCENES[idx];
     demoCurrentScene = idx;
 
-    // Visual updates
+    // Region highlights
     document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
     scene.regions.forEach(rid => {
         const el = document.getElementById('reg-' + rid);
         if (el) el.classList.add('demo-active');
     });
-    document.getElementById('demo-label').textContent = scene.label || '';
-    document.getElementById('demo-thought').textContent = scene.thought || '';
 
-    // Progress bar
+    // Title bar
+    document.getElementById('demo-label').textContent = scene.title || '';
+
+    // Progress bar fills as we move through scenes
     const progress = ((idx + 1) / SCENES.length) * 100;
     document.getElementById('demo-progress').style.width = progress + '%';
-    document.getElementById('demo-time').textContent = `Scene ${idx+1} / ${SCENES.length}`;
+    document.getElementById('demo-time').textContent = `Chapter ${idx + 1} of ${SCENES.length}`;
 
-    // Audio playback with auto-advance on completion
-    if (demoVoiceEnabled && demoAudioCache[idx]) {
-        const audio = demoAudioCache[idx];
-        window._currentTtsAudio = audio;
-        audio.currentTime = 0;
-        audio.onended = () => {
-            if (token !== demoPlaybackToken) return;
-            // Small pause between scenes for breathing room
-            setTimeout(() => playScene(idx + 1, token), 400);
-        };
-        audio.onerror = () => {
-            // Fall back to fixed timing if audio fails
-            if (token !== demoPlaybackToken) return;
-            setTimeout(() => playScene(idx + 1, token), 3000);
-        };
-        audio.play().catch(err => {
-            console.warn('TTS playback failed:', err);
-            // Continue anyway
-            setTimeout(() => playScene(idx + 1, token), 3000);
-        });
-    } else {
-        // Voice off: use fixed timing per scene
-        setTimeout(() => playScene(idx + 1, token), 3500);
+    // Background prefetch for upcoming scenes (concurrency cap = 2 ahead)
+    if (demoLoader) {
+        demoLoader.prefetch(idx + 1);
+        demoLoader.prefetch(idx + 2);
     }
+
+    clearSubtitles();
+
+    if (demoVoiceEnabled && demoLoader) {
+        let audio = demoLoader.audios[idx];
+        if (!audio) {
+            // Audio not ready yet. Show loader, wait for it.
+            document.getElementById('demo-loading').textContent = `Loading chapter ${idx + 1}`;
+            document.getElementById('demo-loading').classList.add('visible');
+            try { audio = await demoLoader.load(idx); }
+            catch (e) { console.warn('TTS load failed:', e); }
+            document.getElementById('demo-loading').classList.remove('visible');
+            if (token !== demoPlaybackToken) return;
+        }
+
+        if (audio) {
+            window._currentTtsAudio = audio;
+            audio.currentTime = 0;
+            demoSubtitleDetach = attachSubtitles(audio, scene.sentences);
+            audio.onended = () => {
+                if (token !== demoPlaybackToken) return;
+                clearSubtitles();
+                setTimeout(() => playScene(idx + 1, token), 600);
+            };
+            audio.onerror = () => {
+                if (token !== demoPlaybackToken) return;
+                setTimeout(() => playScene(idx + 1, token), 2500);
+            };
+            try { await audio.play(); }
+            catch (err) {
+                console.warn('TTS playback failed:', err);
+                setTimeout(() => playScene(idx + 1, token), 2500);
+            }
+            return;
+        }
+    }
+
+    // Fallback when voice is off or audio failed: show subtitles on a fixed schedule.
+    const bar = document.getElementById('demo-subtitle-bar');
+    bar.classList.add('visible');
+    let i = 0;
+    const showNext = () => {
+        if (token !== demoPlaybackToken) return;
+        if (i >= scene.sentences.length) {
+            clearSubtitles();
+            setTimeout(() => playScene(idx + 1, token), 400);
+            return;
+        }
+        bar.innerHTML = '<div class="sub-line">' + escapeHtml(scene.sentences[i]) + '</div>';
+        const dur = Math.max(2200, scene.sentences[i].length * 55);
+        i++;
+        setTimeout(showNext, dur);
+    };
+    showNext();
 }
 </script>
 </div></div></body></html>"""
@@ -954,13 +1196,13 @@ def brain_page():
     return BRAIN_HTML
 
 # ---------------------------------------------------------------------------
-# edge-tts — high-quality neural narration via Microsoft's Edge cloud voices.
+# edge-tts - high-quality neural narration via Microsoft's Edge cloud voices.
 # Free, no API key needed, ~3KB/sec MP3 output. Requires internet.
 # ---------------------------------------------------------------------------
 _tts_lock = threading.Lock()
 _tts_cache: Dict[str, bytes] = {}
 
-# Default voice — natural-sounding US male. Other good options:
+# Default voice - natural-sounding US male. Other good options:
 #   en-US-AriaNeural       (female, warm)
 #   en-US-GuyNeural        (male, professional)
 #   en-US-JennyNeural      (female, friendly)
@@ -1080,7 +1322,7 @@ def voice_chat():
     brain = get_brain()
     user_msg = request.json.get("message", "")
 
-    # 1. Brain tick — computes all 9 factors in <100ms
+    # 1. Brain tick - computes all 9 factors in <100ms
     t0 = time.time()
     brain.tick(user_msg)
     brain_ms = int((time.time() - t0) * 1000)
@@ -1136,9 +1378,9 @@ def main():
     print("  Chip Demo Server")
     print("=" * 60)
     print()
-    print("  http://localhost:8080/brain   — Brain Visualizer")
-    print("  http://localhost:8080/arena   — Survival Arena")
-    print("  http://localhost:8080/voice   — Voice Assistant")
+    print("  http://localhost:8080/brain   - Brain Visualizer")
+    print("  http://localhost:8080/arena   - Survival Arena")
+    print("  http://localhost:8080/voice   - Voice Assistant")
     print()
     print("  Starting brain (first load downloads granite ~250MB)...")
     get_brain()
