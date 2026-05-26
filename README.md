@@ -1,5 +1,7 @@
 ﻿# Chip: A Brain-Anatomical Proto-AGI
 
+[![PyPI](https://img.shields.io/pypi/v/chip-brain?label=chip-brain&color=blue)](https://pypi.org/project/chip-brain)
+
 Chip runs as a pure-Python cognitive engine that follows the layout of a real brain. Modules sit inside their matching regions, pass typed signals across a shared bus, and can drop out without taking the rest of the system down.
 
 The engine does not output text or hit external APIs during its core loop. It builds internal states in one 512-dimensional space so observations, valence, stored episodes, active goals, and chosen actions can be compared directly with cosine similarity.
