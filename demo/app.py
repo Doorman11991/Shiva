@@ -201,7 +201,7 @@ body::after {
 @keyframes sub-fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
 /* Slide panel - per-chapter animated diagram on the right side */
-#demo-slide { position:absolute; top:50%; right:24px; transform:translateY(-50%) translateX(60px); width:380px; max-width:30%; min-height:380px; max-height:78%; background:rgba(6,6,14,0.94); border:1px solid #2a3a5a; border-radius:14px; padding:22px; opacity:0; pointer-events:none; transition:opacity 0.5s ease, transform 0.5s ease; z-index:30; box-shadow:0 0 40px rgba(0,0,0,0.7), 0 0 28px rgba(122,162,247,0.15); overflow:hidden; }
+#demo-slide { position:absolute; top:50%; right:24px; transform:translateY(-50%) translateX(60px); width:380px; max-width:30%; min-height:200px; max-height:68%; background:rgba(6,6,14,0.94); border:1px solid #2a3a5a; border-radius:14px; padding:16px; opacity:0; pointer-events:none; transition:opacity 0.5s ease, transform 0.5s ease; z-index:30; box-shadow:0 0 40px rgba(0,0,0,0.7), 0 0 28px rgba(122,162,247,0.15); overflow-y:auto; }
 #demo-slide.visible { opacity:1; transform:translateY(-50%) translateX(0); pointer-events:auto; }
 #demo-slide.swapping { opacity:0; transform:translateY(-50%) translateX(20px); }
 .slide-h { color:#7aa2f7; font-family:'Courier New',monospace; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #1a2a4a; }
@@ -725,28 +725,23 @@ const SCENES = [
             "And during idle cycles, it does something the human hippocampus does during sleep: it replays key decision points, simulates alternative outcomes, and writes the better ones back as synthetic memories."
         ],
         slide: `
-            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="1">EPISODE = WHERE + WHO + FEEL</div>
-            <div class="mem-card" data-stage="1">2025-03-12 / corridor / unfamiliar door / curious</div>
-            <div class="mem-card" data-stage="1">2025-03-09 / lab / new person introduced / wary</div>
-            <div class="mem-card" data-stage="1">2025-03-04 / kitchen / dropped a glass / startled</div>
+            <div style="font-size:10px;color:#7090b0;font-family:Courier New;margin-bottom:4px;letter-spacing:1px" data-stage="1">EPISODE = WHERE + WHO + FEEL</div>
+            <div class="mem-card" style="animation-delay:0s;padding:5px 8px;margin:3px 0;font-size:10px" data-stage="1">2025-03-12 / corridor / unfamiliar door / curious</div>
+            <div class="mem-card" style="animation-delay:0.15s;padding:5px 8px;margin:3px 0;font-size:10px" data-stage="1">2025-03-09 / lab / new person introduced / wary</div>
+            <div class="mem-card" style="animation-delay:0.3s;padding:5px 8px;margin:3px 0;font-size:10px" data-stage="1">2025-03-04 / kitchen / dropped a glass / startled</div>
 
-            <div style="margin:12px 0;padding:10px;background:rgba(20,15,5,0.6);border-radius:6px;font-size:11px;color:#c0a070;font-family:Inter;line-height:1.5" data-stage="2">
-                <strong style="color:#e0af68">Patient H.M., 1953.</strong> Both hippocampi removed to stop seizures. He could remember his childhood. He could not form a single new conscious memory for the rest of his life.
-            </div>
-            <div style="font-size:11px;color:#7090b0;font-family:Inter;margin:4px 0 8px;line-height:1.5" data-stage="3">
-                Motor skills intact. Emotional responses intact. Episodic memory: gone.
+            <div style="margin:7px 0;padding:7px 9px;background:rgba(20,15,5,0.6);border-radius:5px;font-size:10px;color:#c0a070;font-family:Inter;line-height:1.45" data-stage="2">
+                <strong style="color:#e0af68">H.M., 1953.</strong> Both hippocampi removed. Childhood memories intact. Motor skills intact. Could not form a single new conscious memory for the rest of his life.
             </div>
 
-            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px" data-stage="5">RECALL: cosine similarity</div>
-            <div class="bar-row" data-stage="5"><span class="bar-label">ep #142</span><div class="bar-track"><div class="bar-fill high" style="width:88%"></div></div><span class="bar-val">.88</span></div>
-            <div class="bar-row" data-stage="5"><span class="bar-label">ep #097</span><div class="bar-track"><div class="bar-fill mid" style="width:71%"></div></div><span class="bar-val">.71</span></div>
-            <div class="bar-row" data-stage="5"><span class="bar-label">ep #211</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
-            <div class="bar-row" data-stage="5"><span class="bar-label">ep #033</span><div class="bar-track"><div class="bar-fill low" style="width:22%"></div></div><span class="bar-val">.22</span></div>
-            <div style="font-size:11px;color:#9ece6a;font-family:Inter;margin-top:6px" data-stage="6">
-                Top 3 cross the threshold and enter working memory. The rest stay dormant.
-            </div>
-            <div style="margin-top:10px;padding:8px 10px;background:rgba(10,20,10,0.6);border-left:3px solid #9ece6a;border-radius:4px;font-size:11px;color:#90c890;line-height:1.5;font-family:Inter" data-stage="7">
-                Idle replay: simulates alt trajectories from decision points. Better outcomes get written back as synthetic memories.
+            <div style="font-size:10px;color:#7090b0;font-family:Courier New;margin:6px 0 3px" data-stage="5">RECALL: cosine similarity</div>
+            <div class="bar-row" style="margin:3px 0" data-stage="5"><span class="bar-label">ep #142</span><div class="bar-track"><div class="bar-fill high" style="width:88%"></div></div><span class="bar-val">.88</span></div>
+            <div class="bar-row" style="margin:3px 0" data-stage="5"><span class="bar-label">ep #097</span><div class="bar-track"><div class="bar-fill mid" style="width:71%"></div></div><span class="bar-val">.71</span></div>
+            <div class="bar-row" style="margin:3px 0" data-stage="5"><span class="bar-label">ep #211</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
+            <div class="bar-row" style="margin:3px 0" data-stage="5"><span class="bar-label">ep #033</span><div class="bar-track"><div class="bar-fill low" style="width:22%"></div></div><span class="bar-val">.22</span></div>
+            <div style="font-size:10px;color:#9ece6a;font-family:Inter;margin-top:4px" data-stage="6">Top 3 enter working memory. The rest stay dormant.</div>
+            <div style="margin-top:6px;padding:6px 9px;background:rgba(10,20,10,0.6);border-left:3px solid #9ece6a;border-radius:4px;font-size:10px;color:#90c890;line-height:1.4;font-family:Inter" data-stage="7">
+                Idle replay: simulates alt trajectories, writes better outcomes back as synthetic memories.
             </div>
         `
     },
