@@ -718,9 +718,11 @@ const SCENES = [
             "The hippocampus is shaped like a seahorse, which is where its name comes from.",
             "It binds together where you were, who was with you, and what you felt, then writes that bundle to long-term memory while you sleep.",
             "Patient H.M. had his removed in 1953 and could never form a new conscious memory again.",
+            "He could still ride a bike. He could still feel emotions. He just could not tell you what happened five minutes ago.",
             "Chip's hippocampus stores each episode indexed by its latent vector.",
             "When new input arrives, it pulls the three most relevant past episodes back into working memory through cosine similarity.",
-            "It also watches for prediction errors and marks event boundaries, which is why you remember a car crash but forget the drive there."
+            "It also watches for prediction errors and marks event boundaries, which is why you remember a car crash but forget the drive there.",
+            "And during idle cycles, it does something the human hippocampus does during sleep: it replays key decision points, simulates alternative outcomes, and writes the better ones back as synthetic memories."
         ],
         slide: `
             <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="1">EPISODE = WHERE + WHO + FEEL</div>
@@ -731,14 +733,20 @@ const SCENES = [
             <div style="margin:12px 0;padding:10px;background:rgba(20,15,5,0.6);border-radius:6px;font-size:11px;color:#c0a070;font-family:Inter;line-height:1.5" data-stage="2">
                 <strong style="color:#e0af68">Patient H.M., 1953.</strong> Both hippocampi removed to stop seizures. He could remember his childhood. He could not form a single new conscious memory for the rest of his life.
             </div>
+            <div style="font-size:11px;color:#7090b0;font-family:Inter;margin:4px 0 8px;line-height:1.5" data-stage="3">
+                Motor skills intact. Emotional responses intact. Episodic memory: gone.
+            </div>
 
-            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px" data-stage="4">RECALL: cosine similarity</div>
-            <div class="bar-row" data-stage="4"><span class="bar-label">ep #142</span><div class="bar-track"><div class="bar-fill high" style="width:88%"></div></div><span class="bar-val">.88</span></div>
-            <div class="bar-row" data-stage="4"><span class="bar-label">ep #097</span><div class="bar-track"><div class="bar-fill mid" style="width:71%"></div></div><span class="bar-val">.71</span></div>
-            <div class="bar-row" data-stage="4"><span class="bar-label">ep #211</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
-            <div class="bar-row" data-stage="4"><span class="bar-label">ep #033</span><div class="bar-track"><div class="bar-fill low" style="width:22%"></div></div><span class="bar-val">.22</span></div>
-            <div style="font-size:11px;color:#9ece6a;font-family:Inter;margin-top:6px" data-stage="5">
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px" data-stage="5">RECALL: cosine similarity</div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">ep #142</span><div class="bar-track"><div class="bar-fill high" style="width:88%"></div></div><span class="bar-val">.88</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">ep #097</span><div class="bar-track"><div class="bar-fill mid" style="width:71%"></div></div><span class="bar-val">.71</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">ep #211</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">ep #033</span><div class="bar-track"><div class="bar-fill low" style="width:22%"></div></div><span class="bar-val">.22</span></div>
+            <div style="font-size:11px;color:#9ece6a;font-family:Inter;margin-top:6px" data-stage="6">
                 Top 3 cross the threshold and enter working memory. The rest stay dormant.
+            </div>
+            <div style="margin-top:10px;padding:8px 10px;background:rgba(10,20,10,0.6);border-left:3px solid #9ece6a;border-radius:4px;font-size:11px;color:#90c890;line-height:1.5;font-family:Inter" data-stage="7">
+                Idle replay: simulates alt trajectories from decision points. Better outcomes get written back as synthetic memories.
             </div>
         `
     },
@@ -899,30 +907,101 @@ const SCENES = [
         regions: ["cerebrum", "hippocampus", "amygdala"],
         sentences: [
             "What separates Chip from a language model is structure, not scale.",
-            "Belief revision happens through spherical linear interpolation, so a contradiction rotates the embedding instead of snapping it.",
-            "Every hundred ticks, Chip writes a short description of itself, re-encodes it, and anchors that token to keep identity from drifting.",
-            "Memory replay does more than rehearse old episodes. It searches alternative trajectories from key decision points and keeps the better ones as synthetic memories.",
-            "This is not a model that wakes up only when prompted.",
-            "It runs whether you are watching or not, and it remembers what you said yesterday."
+            "A language model has no drives. It does not get bored, hungry, or curious on its own. It responds when called and forgets when the context window closes.",
+            "Chip has none of those limitations by design.",
+            "Belief revision happens through spherical linear interpolation, so a contradiction rotates the embedding instead of snapping it. Small contradictions stay quiet. Large ones trigger deliberate review.",
+            "Every hundred ticks, Chip writes a short description of its current state, re-encodes it, and anchors that token. This stops the slow identity drift that accumulates in any system trained continuously.",
+            "Memory replay does more than rehearse old episodes. It finds key decision points, asks the world model for alternative trajectories, scores them, and keeps the better ones as synthetic memories.",
+            "The result is a system that gets better at decisions it has already made, without needing new data from the outside world."
         ],
         slide: `
-            <svg viewBox="0 0 360 160" style="margin-bottom:6px" data-stage="1">
-                <circle cx="180" cy="80" r="60" fill="none" stroke="#3a4a6a" stroke-width="1" stroke-dasharray="3 3"/>
-                <line x1="180" y1="80" x2="240" y2="80" stroke="#7aa2f7" stroke-width="2.5" marker-end=""/>
-                <circle cx="240" cy="80" r="3" fill="#7aa2f7"/>
-                <text x="244" y="76" fill="#7aa2f7" font-size="9" font-family="Courier New">old belief</text>
-                <line x1="180" y1="80" x2="220" y2="35" class="belief-vec"/>
-                <circle cx="220" cy="35" r="3" fill="#bb9af7"/>
-                <text x="224" y="32" fill="#bb9af7" font-size="9" font-family="Courier New">new belief</text>
-                <text x="180" y="156" fill="#5a6a8a" font-size="9" text-anchor="middle" font-family="Inter" font-style="italic">SLERP rotates on the unit sphere</text>
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:8px;letter-spacing:1px" data-stage="0">LLM vs CHIP</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px" data-stage="1">
+                <div style="padding:8px;background:rgba(30,10,10,0.5);border:1px solid #3a2a2a;border-radius:6px;font-size:10px;font-family:Inter;color:#c09090;line-height:1.6">
+                    <div style="color:#f7768e;font-family:Courier New;font-size:10px;margin-bottom:4px">LLM</div>
+                    no drives<br>no memory<br>no identity<br>sleeps between calls<br>forgets on close
+                </div>
+                <div style="padding:8px;background:rgba(10,25,10,0.5);border:1px solid #2a3a2a;border-radius:6px;font-size:10px;font-family:Inter;color:#90c090;line-height:1.6">
+                    <div style="color:#9ece6a;font-family:Courier New;font-size:10px;margin-bottom:4px">CHIP</div>
+                    6 drives<br>episodic memory<br>anchored identity<br>runs continuously<br>persists across restarts
+                </div>
+            </div>
+            <svg viewBox="0 0 360 130" style="margin-bottom:6px" data-stage="3">
+                <circle cx="180" cy="65" r="52" fill="none" stroke="#3a4a6a" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="180" y1="65" x2="232" y2="65" stroke="#7aa2f7" stroke-width="2.5"/>
+                <circle cx="232" cy="65" r="3" fill="#7aa2f7"/>
+                <text x="236" y="61" fill="#7aa2f7" font-size="9" font-family="Courier New">old belief</text>
+                <line x1="180" y1="65" x2="218" y2="22" class="belief-vec"/>
+                <circle cx="218" cy="22" r="3" fill="#bb9af7"/>
+                <text x="222" y="19" fill="#bb9af7" font-size="9" font-family="Courier New">new belief</text>
+                <text x="180" y="124" fill="#5a6a8a" font-size="9" text-anchor="middle" font-family="Inter" font-style="italic">SLERP: contradiction rotates, does not snap</text>
             </svg>
-
-            <div class="slide-stage" data-stage="2"><span class="slide-stage-name">identity</span><span class="slide-stage-desc">re-anchored every 100 ticks</span></div>
-            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">replay</span><span class="slide-stage-desc">searches alt trajectories</span></div>
-            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">synthetic mem</span><span class="slide-stage-desc">better outcomes saved back</span></div>
-
-            <div style="margin-top:12px;padding:10px;background:rgba(5,15,25,0.6);border-radius:6px;font-size:11px;color:#9ece6a;line-height:1.5;font-family:Inter;font-weight:bold" data-stage="5">
-                It runs whether you are watching or not. It remembers what you said yesterday.
+            <div class="slide-stage" data-stage="4"><span class="slide-stage-name">identity</span><span class="slide-stage-desc">re-anchored every 100 ticks</span></div>
+            <div class="slide-stage" data-stage="5"><span class="slide-stage-name">replay</span><span class="slide-stage-desc">alt trajectories scored + saved</span></div>
+            <div style="margin-top:10px;padding:8px 10px;background:rgba(10,20,10,0.5);border-left:3px solid #9ece6a;border-radius:4px;font-size:11px;color:#90c890;line-height:1.5;font-family:Inter" data-stage="6">
+                Gets better at decisions it has already made. No new data required.
+            </div>
+        `
+    },
+    {
+        title: "The problem Chip is built to solve",
+        regions: ["cerebrum", "thalamus", "hippocampus", "hypothalamus", "amygdala"],
+        sentences: [
+            "Every AI system in production today has the same structural problem.",
+            "It wakes up when you call it. It answers. Then it forgets everything and goes back to sleep.",
+            "There is no continuity. No accumulation. No sense that the system has been alive between your messages.",
+            "That is fine for a search engine. It is not fine for anything that needs to act in the world over time.",
+            "A robot that forgets what it learned yesterday is not useful. An agent that cannot feel the pull of an unfinished goal will never finish anything on its own.",
+            "The deeper problem is that intelligence without motivation is just a lookup table. Fast, accurate, and completely passive.",
+            "Chip is an attempt to build the missing layer: a cognitive substrate that runs continuously, accumulates experience, and generates its own reasons to act.",
+            "Not a smarter chatbot. A persistent mind."
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:8px;letter-spacing:1px" data-stage="0">THE STRUCTURAL GAP</div>
+            <div style="padding:10px;background:rgba(25,10,10,0.6);border:1px solid #3a2020;border-radius:6px;font-size:11px;color:#c09090;line-height:1.7;font-family:Inter;margin-bottom:10px" data-stage="1">
+                <span style="color:#f7768e;font-family:Courier New">Current AI loop:</span><br>
+                prompt &rarr; respond &rarr; <strong>forget</strong> &rarr; prompt &rarr; respond &rarr; <strong>forget</strong>
+            </div>
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px;letter-spacing:1px" data-stage="3">WHAT IS MISSING</div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">continuity</span><span class="slide-stage-desc">state persists between calls</span></div>
+            <div class="slide-stage" data-stage="4"><span class="slide-stage-name">motivation</span><span class="slide-stage-desc">acts without being prompted</span></div>
+            <div class="slide-stage" data-stage="5"><span class="slide-stage-name">accumulation</span><span class="slide-stage-desc">experience compounds over time</span></div>
+            <div class="slide-stage" data-stage="6"><span class="slide-stage-name">identity</span><span class="slide-stage-desc">stable self across restarts</span></div>
+            <div style="margin-top:12px;padding:10px;background:rgba(10,20,30,0.6);border-left:3px solid #7aa2f7;border-radius:4px;font-size:12px;color:#a0c8f0;line-height:1.5;font-family:Inter;font-weight:bold" data-stage="7">
+                Intelligence without motivation is just a lookup table.
+            </div>
+        `
+    },
+    {
+        title: "Chip: a persistent mind",
+        regions: ["cerebrum", "amygdala", "hippocampus", "hypothalamus", "thalamus", "cerebellum", "brainstem"],
+        sentences: [
+            "So here is what Chip actually is.",
+            "It is a pure-Python cognitive engine with seven brain regions, each doing the job its biological counterpart does.",
+            "The thalamus encodes every input into a 512-dimensional vector. The amygdala scores it emotionally and can veto dangerous actions in under a millisecond.",
+            "The hippocampus stores every episode and recalls the three most relevant ones by cosine similarity. The hypothalamus tracks six drives and fires goals when any of them drift.",
+            "The cerebrum holds seven working-memory slots, runs a dual-actor policy, generates inner speech in plain English, and anchors identity every hundred ticks.",
+            "The cerebellum smooths every action and maintains a skill library. The brainstem runs the training loop, clips gradients, and writes a signed snapshot to disk.",
+            "One hundred ninety-one tests cover the full loop. The package is on PyPI as chip-brain. The Docker image is on GitHub Container Registry.",
+            "This is not a finished product. It is a foundation. The architecture handles persistence, graceful degradation, and clean restarts. Real capability will come once it trains inside richer environments.",
+            "But the structure is right. And the structure is what has been missing."
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:8px;letter-spacing:1px" data-stage="0">CHIP AT A GLANCE</div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">regions</span><div class="bar-track"><div class="bar-fill high" style="width:100%"></div></div><span class="bar-val">7</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">latent dim</span><div class="bar-track"><div class="bar-fill high" style="width:100%"></div></div><span class="bar-val">512</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">drives</span><div class="bar-track"><div class="bar-fill mid" style="width:60%"></div></div><span class="bar-val">6</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">WM slots</span><div class="bar-track"><div class="bar-fill mid" style="width:70%"></div></div><span class="bar-val">7</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">tests</span><div class="bar-track"><div class="bar-fill high" style="width:100%"></div></div><span class="bar-val">191</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0" data-stage="6">
+                <span class="slide-chip">pip install chip-brain</span>
+                <span class="slide-chip cyan">ghcr.io/doorman11991/chip</span>
+            </div>
+            <div style="padding:10px;background:rgba(10,20,10,0.6);border:1px solid #2a3a2a;border-radius:6px;font-size:11px;color:#90c890;line-height:1.6;font-family:Inter;margin-top:6px" data-stage="7">
+                Persistence. Graceful degradation. Clean restarts. The architecture is ready. The environment is next.
+            </div>
+            <div style="margin-top:10px;padding:10px;background:rgba(8,8,20,0.8);border-left:3px solid #bb9af7;border-radius:4px;font-size:13px;color:#d0b8f8;line-height:1.4;font-family:Inter;font-weight:bold;text-align:center" data-stage="8">
+                The structure is right.<br>And the structure is what has been missing.
             </div>
         `
     }
