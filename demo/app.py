@@ -181,7 +181,24 @@ body::after {
 .brain-region { cursor:pointer; transition:opacity 0.3s ease, filter 0.3s ease; opacity:0.7; }
 .brain-region:hover { opacity:1; filter:url(#strongGlow) brightness(1.4); }
 .brain-region.active { opacity:1; }
+.brain-region.demo-active { opacity:1; filter:url(#strongGlow) brightness(1.6); animation:demo-pulse 1.4s ease-in-out infinite; }
+@keyframes demo-pulse { 0%,100% { opacity:0.85; } 50% { opacity:1; } }
 @keyframes hover-pulse { 0%,100% { opacity:0.85; } 50% { opacity:1; } }
+
+/* Demo overlay */
+#demo-controls { position:absolute; top:16px; right:16px; display:flex; gap:8px; z-index:50; }
+#demo-controls button { background:rgba(15,15,26,0.85); border:1px solid #3a4a6a; color:#a0c0ff; padding:8px 14px; border-radius:6px; cursor:pointer; font-family:'Courier New',monospace; font-size:12px; transition:all 0.2s; }
+#demo-controls button:hover { background:rgba(26,42,74,0.9); border-color:#7aa2f7; }
+#demo-overlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.5s; z-index:20; }
+#demo-overlay.active { opacity:1; }
+#demo-label-bar { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(8,8,15,0.92); border:1px solid #7aa2f7; border-radius:8px; padding:10px 22px; color:#c0d8ff; font-family:'Courier New',monospace; font-size:15px; font-weight:bold; letter-spacing:1px; box-shadow:0 0 24px rgba(122,162,247,0.4); }
+#demo-label-bar:empty { display:none; }
+#demo-thought-bubble { position:absolute; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(15,30,15,0.92); border:1px solid #9ece6a; border-radius:14px; padding:12px 22px; color:#c0e0a0; font-family:'Courier New',monospace; font-size:13px; font-style:italic; max-width:60%; text-align:center; box-shadow:0 0 20px rgba(158,206,106,0.3); }
+#demo-thought-bubble:empty { display:none; }
+#demo-thought-bubble:has(span:empty) { display:none; }
+#demo-progress-container { position:absolute; bottom:30px; left:10%; right:10%; height:4px; background:rgba(20,20,40,0.6); border-radius:2px; overflow:hidden; }
+#demo-progress { height:100%; background:linear-gradient(90deg, #7aa2f7, #bb9af7, #f7768e); transition:width 0.1s; }
+#demo-time { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:#565f89; font-family:'Courier New',monospace; font-size:11px; }
 
 /* Glow animations */
 @keyframes pulse-blue { 0%,100%{filter:drop-shadow(0 0 4px #7aa2f7);} 50%{filter:drop-shadow(0 0 16px #7aa2f7) drop-shadow(0 0 30px #4a72c7);} }
@@ -248,6 +265,18 @@ body::after {
 </div>
 
 <div id="brain-container">
+    <!-- Demo controls + overlay -->
+    <div id="demo-controls">
+        <button id="demo-btn" onclick="toggleDemo()">▶ Play Demo</button>
+        <button id="voice-btn" onclick="toggleVoice()">🔊 Voice ON</button>
+    </div>
+    <div id="demo-overlay">
+        <div id="demo-label-bar"><span id="demo-label"></span></div>
+        <div id="demo-thought-bubble"><span id="demo-thought"></span></div>
+        <div id="demo-progress-container"><div id="demo-progress"></div></div>
+        <div id="demo-time"></div>
+    </div>
+
     <svg viewBox="0 0 600 700" width="60%" height="64%" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -503,6 +532,114 @@ function update(data) {
 
 const evtSource = new EventSource('/brain/stream');
 evtSource.onmessage = (e) => { try { update(JSON.parse(e.data)); } catch(err){} };
+
+// ============================================================
+// DEMO SLIDESHOW — auto-narrated tour of the brain architecture
+// ============================================================
+
+const SCENES = [
+    { t: 0, dur: 8, narr: "This is Chip's cognitive architecture — a brain made of code.", regions: [], label: "Chip's Cognitive Architecture" },
+    { t: 8, dur: 3, narr: "The Cerebrum handles planning and goals.", regions: ["cerebrum"], label: "Cerebrum: Planning & Goals" },
+    { t: 11, dur: 3, narr: "The Amygdala processes emotion and valence.", regions: ["amygdala"], label: "Amygdala: Emotion & Valence" },
+    { t: 14, dur: 3, narr: "The Hippocampus forms and recalls memories.", regions: ["hippocampus"], label: "Hippocampus: Memory" },
+    { t: 17, dur: 3, narr: "The Hypothalamus drives motivation through homeostatic needs.", regions: ["hypothalamus"], label: "Hypothalamus: Drives" },
+    { t: 20, dur: 3, narr: "The Thalamus integrates sensory input and attention.", regions: ["thalamus"], label: "Thalamus: Sensory Hub" },
+    { t: 23, dur: 4, narr: "Watch a thought form in real time.", regions: ["thalamus"], label: "Observation enters the Thalamus", thought: "Something new is happening..." },
+    { t: 27, dur: 4, narr: "The Amygdala reacts emotionally.", regions: ["thalamus", "amygdala"], label: "Emotional response", thought: "This feels significant." },
+    { t: 31, dur: 4, narr: "The Hippocampus searches for similar memories.", regions: ["amygdala", "hippocampus"], label: "Memory recall", thought: "Have I felt this before?" },
+    { t: 35, dur: 4, narr: "The Cerebrum forms a plan.", regions: ["hippocampus", "cerebrum"], label: "Goal formation", thought: "I should investigate further." },
+    { t: 39, dur: 4, narr: "The Hypothalamus reinforces motivation.", regions: ["cerebrum", "hypothalamus"], label: "Motivational drive", thought: "Curiosity is rising." },
+    { t: 43, dur: 5, narr: "When new evidence contradicts a belief, it rotates smoothly through SLERP — spherical linear interpolation.", regions: ["cerebrum", "hippocampus"], label: "SLERP Belief Revision" },
+    { t: 48, dur: 5, narr: "All thought happens in a 512-dimensional latent space — a constellation of meaning.", regions: ["thalamus", "cerebrum"], label: "Latent Space (512-D)" },
+    { t: 53, dur: 5, narr: "Emotion modulates everything. Frustration fades as curiosity takes over.", regions: ["amygdala", "hypothalamus"], label: "Emotional Homeostasis" },
+    { t: 58, dur: 7, narr: "Persistent memory. Intrinsic motivation. Emotional homeostasis. This is how Chip thinks.", regions: ["cerebrum","amygdala","hippocampus","hypothalamus","thalamus","cerebellum","brainstem"], label: "This is how Chip thinks" },
+];
+
+let demoActive = false;
+let demoStartTime = 0;
+let demoVoiceEnabled = true;
+let demoCurrentScene = -1;
+
+function toggleDemo() {
+    if (demoActive) { stopDemo(); } else { startDemo(); }
+}
+
+function toggleVoice() {
+    demoVoiceEnabled = !demoVoiceEnabled;
+    document.getElementById('voice-btn').textContent = demoVoiceEnabled ? '🔊 Voice ON' : '🔇 Voice OFF';
+    if (!demoVoiceEnabled) window.speechSynthesis.cancel();
+}
+
+function startDemo() {
+    demoActive = true;
+    demoStartTime = performance.now();
+    demoCurrentScene = -1;
+    document.getElementById('demo-overlay').classList.add('active');
+    document.getElementById('demo-btn').textContent = '⏸ Stop Demo';
+    runDemoLoop();
+}
+
+function stopDemo() {
+    demoActive = false;
+    document.getElementById('demo-overlay').classList.remove('active');
+    document.getElementById('demo-btn').textContent = '▶ Play Demo';
+    document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
+    document.getElementById('demo-label').textContent = '';
+    document.getElementById('demo-thought').textContent = '';
+    window.speechSynthesis.cancel();
+}
+
+function speak(text) {
+    if (!demoVoiceEnabled) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    // Prefer a more natural voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => /natural|neural|aria|guy|jenny|david/i.test(v.name)) || voices[0];
+    if (preferred) u.voice = preferred;
+    window.speechSynthesis.speak(u);
+}
+
+function runDemoLoop() {
+    if (!demoActive) return;
+    const elapsed = (performance.now() - demoStartTime) / 1000;
+    const totalDuration = SCENES[SCENES.length-1].t + SCENES[SCENES.length-1].dur;
+
+    if (elapsed > totalDuration) { stopDemo(); return; }
+
+    // Find current scene
+    let scene = SCENES[0];
+    let sceneIdx = 0;
+    for (let i = 0; i < SCENES.length; i++) {
+        if (elapsed >= SCENES[i].t) { scene = SCENES[i]; sceneIdx = i; }
+    }
+
+    // If scene changed, trigger transitions
+    if (sceneIdx !== demoCurrentScene) {
+        demoCurrentScene = sceneIdx;
+        // Update active regions
+        document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
+        scene.regions.forEach(rid => {
+            const el = document.getElementById('reg-' + rid);
+            if (el) el.classList.add('demo-active');
+        });
+        // Update label & thought
+        document.getElementById('demo-label').textContent = scene.label || '';
+        document.getElementById('demo-thought').textContent = scene.thought || '';
+        // Narrate
+        if (scene.narr) speak(scene.narr);
+    }
+
+    // Update progress bar
+    const progress = (elapsed / totalDuration) * 100;
+    document.getElementById('demo-progress').style.width = progress + '%';
+    document.getElementById('demo-time').textContent = elapsed.toFixed(1) + 's / ' + totalDuration + 's';
+
+    requestAnimationFrame(runDemoLoop);
+}
 </script>
 </div></div></body></html>"""
 
