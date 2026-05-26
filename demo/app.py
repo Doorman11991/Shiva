@@ -200,6 +200,46 @@ body::after {
 #demo-subtitle-bar .sub-line { opacity:0; animation:sub-fade 0.35s ease forwards; }
 @keyframes sub-fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
+/* Slide panel - per-chapter animated diagram on the right side */
+#demo-slide { position:absolute; top:50%; right:24px; transform:translateY(-50%) translateX(60px); width:380px; max-width:30%; min-height:380px; max-height:78%; background:rgba(6,6,14,0.94); border:1px solid #2a3a5a; border-radius:14px; padding:22px; opacity:0; pointer-events:none; transition:opacity 0.5s ease, transform 0.5s ease; z-index:30; box-shadow:0 0 40px rgba(0,0,0,0.7), 0 0 28px rgba(122,162,247,0.15); overflow:hidden; }
+#demo-slide.visible { opacity:1; transform:translateY(-50%) translateX(0); pointer-events:auto; }
+#demo-slide.swapping { opacity:0; transform:translateY(-50%) translateX(20px); }
+.slide-h { color:#7aa2f7; font-family:'Courier New',monospace; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #1a2a4a; }
+.slide-body { color:#cdd6e8; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:13px; line-height:1.5; }
+.slide-body svg { width:100%; height:auto; display:block; margin:6px 0; }
+.slide-row { display:flex; align-items:center; gap:10px; padding:6px 0; }
+.slide-chip { display:inline-block; padding:3px 10px; border-radius:10px; font-size:10px; font-family:'Courier New',monospace; letter-spacing:1px; background:rgba(122,162,247,0.12); border:1px solid rgba(122,162,247,0.4); color:#a0c0ff; }
+.slide-chip.warm { background:rgba(247,118,142,0.12); border-color:rgba(247,118,142,0.4); color:#f7a0b0; }
+.slide-chip.gold { background:rgba(224,175,104,0.12); border-color:rgba(224,175,104,0.4); color:#f0c890; }
+.slide-chip.green { background:rgba(158,206,106,0.12); border-color:rgba(158,206,106,0.4); color:#b8e090; }
+.slide-chip.purple { background:rgba(187,154,247,0.12); border-color:rgba(187,154,247,0.4); color:#d0b0f0; }
+.slide-chip.cyan { background:rgba(125,207,255,0.12); border-color:rgba(125,207,255,0.4); color:#a0d8ff; }
+.slide-stage { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(15,20,40,0.5); border-radius:6px; margin:6px 0; border-left:2px solid #3a4a6a; }
+.slide-stage.lit { border-left-color:#7aa2f7; box-shadow:0 0 10px rgba(122,162,247,0.2); }
+.slide-stage-name { font-size:11px; font-weight:bold; color:#c0d0ff; min-width:90px; font-family:'Courier New',monospace; }
+.slide-stage-desc { font-size:11px; color:#8090b0; }
+.bar-row { display:flex; align-items:center; gap:8px; margin:5px 0; font-size:11px; font-family:'Courier New',monospace; }
+.bar-label { width:80px; color:#a0b0c8; }
+.bar-track { flex:1; height:8px; background:#1a1a2e; border-radius:4px; overflow:hidden; position:relative; }
+.bar-fill { height:100%; transition:width 1.4s ease; }
+.bar-fill.low { background:linear-gradient(90deg,#f7768e,#ff9090); animation:bar-pulse 1.2s ease-in-out infinite; }
+.bar-fill.mid { background:linear-gradient(90deg,#e0af68,#f0c878); }
+.bar-fill.high { background:linear-gradient(90deg,#9ece6a,#b8e078); }
+.bar-val { width:36px; text-align:right; color:#7aa2f7; }
+@keyframes bar-pulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.6); } }
+.mem-card { padding:8px 10px; background:rgba(20,18,30,0.6); border:1px solid #2a2a3a; border-left:3px solid #e0af68; border-radius:4px; margin:5px 0; font-size:11px; color:#c0b890; font-family:'Courier New',monospace; opacity:0; animation:card-slide 0.5s ease forwards; }
+@keyframes card-slide { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+.wm-slot { display:inline-block; width:36px; height:36px; margin:3px; border-radius:6px; border:1px solid #2a3a5a; background:rgba(15,20,40,0.5); text-align:center; line-height:36px; font-size:10px; font-family:'Courier New',monospace; color:#5060a0; }
+.wm-slot.filled { background:rgba(122,162,247,0.15); border-color:#7aa2f7; color:#a0c0ff; box-shadow:0 0 8px rgba(122,162,247,0.3); }
+.heartbeat-svg path { stroke:#f7768e; stroke-width:1.6; fill:none; stroke-dasharray:1000; stroke-dashoffset:1000; animation:hb-draw 2.4s linear infinite; }
+@keyframes hb-draw { to { stroke-dashoffset:-1000; } }
+.signal-pulse { fill:#7aa2f7; }
+@keyframes pipeline-pulse { 0% { offset-distance:0%; } 100% { offset-distance:100%; } }
+.flow-line { stroke:#7aa2f7; stroke-width:1.5; fill:none; stroke-dasharray:6 4; animation:flow 1.5s linear infinite; }
+.dim-axis { stroke:#3a4a6a; stroke-width:1; }
+.belief-vec { stroke:#bb9af7; stroke-width:2.5; fill:none; transform-origin:50% 50%; animation:slerp-rotate 4s ease-in-out infinite; }
+@keyframes slerp-rotate { 0% { transform:rotate(0deg); } 50% { transform:rotate(35deg); } 100% { transform:rotate(0deg); } }
+
 #demo-loading { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(8,8,15,0.95); border:1px solid #7aa2f7; border-radius:10px; padding:18px 30px; color:#c0d8ff; font-family:'Courier New',monospace; font-size:14px; box-shadow:0 0 30px rgba(122,162,247,0.4); display:none; z-index:60; }
 #demo-loading.visible { display:block; }
 #demo-loading::after { content:''; display:inline-block; width:14px; height:14px; margin-left:10px; border:2px solid #7aa2f7; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; }
@@ -290,6 +330,7 @@ body::after {
     <div id="demo-overlay">
         <div id="demo-label-bar"><span id="demo-label"></span></div>
         <div id="demo-loading">Loading first chapter</div>
+        <div id="demo-slide"><div class="slide-h" id="slide-h">Chapter</div><div class="slide-body" id="slide-body"></div></div>
         <div id="demo-subtitle-bar"></div>
         <div id="demo-progress-container"><div id="demo-progress"></div></div>
         <div id="demo-time"></div>
@@ -570,7 +611,21 @@ const SCENES = [
             "Chip follows that exact path.",
             "What you are looking at is not a chatbot. It is a brain.",
             "Each region has its own job, and they pass typed messages to each other every tick."
-        ]
+        ],
+        slide: `
+            <div class="slide-stage" data-stage="0"><span class="slide-stage-name">SENSE</span><span class="slide-stage-desc">input arrives</span></div>
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">ROUTE</span><span class="slide-stage-desc">thalamic gating</span></div>
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">FEEL</span><span class="slide-stage-desc">amygdala valence</span></div>
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">RECALL</span><span class="slide-stage-desc">hippocampal lookup</span></div>
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">PLAN</span><span class="slide-stage-desc">cortical decision</span></div>
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">ACT</span><span class="slide-stage-desc">cerebellar smoothing</span></div>
+            <div style="margin-top:14px;padding:10px;background:rgba(15,30,15,0.4);border-radius:6px;font-size:11px;color:#90b890;line-height:1.5;" data-stage="2">
+                Same loop, every tick. <span style="color:#9ece6a">No region imports another</span>; they communicate by typed signals on a shared bus.
+            </div>
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;" data-stage="4">
+                <span class="slide-chip">cerebrum</span><span class="slide-chip warm">amygdala</span><span class="slide-chip gold">hippocampus</span><span class="slide-chip purple">hypothalamus</span><span class="slide-chip green">cerebellum</span><span class="slide-chip cyan">brainstem</span>
+            </div>
+        `
     },
     {
         title: "Thalamus: the gate everything passes through",
@@ -582,7 +637,42 @@ const SCENES = [
             "Chip's thalamus does the same job in software.",
             "Incoming text gets encoded by Granite-125m into a 512-dimensional vector, runs through a transformer backbone, and an attention bottleneck keeps only the strongest features.",
             "The rest is discarded the way you stop noticing the feel of your own clothes a few seconds after putting them on."
-        ]
+        ],
+        slide: `
+            <svg viewBox="0 0 360 200" style="margin-bottom:8px">
+                <defs>
+                    <linearGradient id="thalGrad" x1="0%" x2="100%"><stop offset="0%" stop-color="#7aa2f7" stop-opacity="0.2"/><stop offset="100%" stop-color="#7aa2f7" stop-opacity="0.05"/></linearGradient>
+                </defs>
+                <text x="20" y="22" fill="#7090b0" font-size="10" font-family="Courier New">INPUT STREAMS</text>
+                <text x="20" y="44" fill="#a0c0ff" font-size="11" font-family="Inter">vision</text>
+                <text x="20" y="62" fill="#a0c0ff" font-size="11" font-family="Inter">touch</text>
+                <text x="20" y="80" fill="#a0c0ff" font-size="11" font-family="Inter">hearing</text>
+                <text x="20" y="98" fill="#a0c0ff" font-size="11" font-family="Inter">taste</text>
+                <text x="20" y="116" fill="#5a6a8a" font-size="11" font-family="Inter" font-style="italic">smell (skips)</text>
+
+                <line x1="80" y1="40" x2="170" y2="100" class="flow-line"/>
+                <line x1="80" y1="58" x2="170" y2="100" class="flow-line"/>
+                <line x1="80" y1="76" x2="170" y2="100" class="flow-line"/>
+                <line x1="80" y1="94" x2="170" y2="100" class="flow-line"/>
+
+                <ellipse cx="180" cy="100" rx="34" ry="28" fill="url(#thalGrad)" stroke="#c0caf5" stroke-width="2"/>
+                <text x="180" y="98" fill="#c0caf5" font-size="11" text-anchor="middle" font-family="Courier New" font-weight="bold">THAL</text>
+                <text x="180" y="112" fill="#a0b0d0" font-size="9" text-anchor="middle" font-family="Inter">filter</text>
+
+                <line x1="216" y1="100" x2="290" y2="60" class="flow-line"/>
+                <line x1="216" y1="100" x2="290" y2="100" class="flow-line"/>
+                <line x1="216" y1="100" x2="290" y2="140" class="flow-line"/>
+
+                <text x="300" y="60" fill="#7aa2f7" font-size="11" font-family="Courier New">cortex</text>
+                <text x="300" y="100" fill="#f7768e" font-size="11" font-family="Courier New">amygdala</text>
+                <text x="300" y="140" fill="#5a6a8a" font-size="11" font-family="Courier New">discarded</text>
+            </svg>
+            <div class="bar-row" data-stage="4"><span class="bar-label">tokens in</span><div class="bar-track"><div class="bar-fill mid" style="width:90%"></div></div><span class="bar-val">512</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">survives</span><div class="bar-track"><div class="bar-fill high" style="width:18%"></div></div><span class="bar-val">~94</span></div>
+            <div style="font-size:11px;color:#7090b0;line-height:1.5;margin-top:6px;font-family:Inter" data-stage="5">
+                Attention bottleneck keeps roughly the top 18 percent of features. The rest fade the way clothing fades from awareness.
+            </div>
+        `
     },
     {
         title: "Amygdala: the fast lane for emotion",
@@ -594,7 +684,32 @@ const SCENES = [
             "That low road is why you flinch from a snake on the trail before you consciously register it is a snake.",
             "Chip's amygdala scores valence in the same shortcut, and it can veto an action before the planner has even finished thinking.",
             "It also habituates. Show it the same input twenty times and the response fades, the same way your brain stops reacting to a ticking clock."
-        ]
+        ],
+        slide: `
+            <svg viewBox="0 0 360 180" style="margin-bottom:10px">
+                <circle cx="40" cy="90" r="18" fill="rgba(192,202,245,0.15)" stroke="#c0caf5" stroke-width="2"/>
+                <text x="40" y="93" fill="#c0caf5" font-size="9" text-anchor="middle" font-family="Courier New">THAL</text>
+
+                <path d="M62,82 C140,40 220,40 290,55" class="flow-line" stroke="#7aa2f7" data-stage="1"/>
+                <text x="170" y="32" fill="#7aa2f7" font-size="10" text-anchor="middle" font-family="Courier New">HIGH ROAD - cortex - 100ms</text>
+
+                <path d="M62,98 C140,140 220,140 290,125" class="flow-line" stroke="#f7768e" data-stage="2"/>
+                <text x="170" y="170" fill="#f7768e" font-size="10" text-anchor="middle" font-family="Courier New">LOW ROAD - amygdala - 12ms</text>
+
+                <rect x="280" y="40" width="60" height="36" rx="6" fill="rgba(122,162,247,0.1)" stroke="#7aa2f7" stroke-width="1.5"/>
+                <text x="310" y="62" fill="#a0c0ff" font-size="10" text-anchor="middle" font-family="Courier New">CORTEX</text>
+
+                <rect x="280" y="105" width="60" height="36" rx="6" fill="rgba(247,118,142,0.1)" stroke="#f7768e" stroke-width="1.5" data-stage="3"/>
+                <text x="310" y="127" fill="#f7a0b0" font-size="10" text-anchor="middle" font-family="Courier New">AMYG</text>
+            </svg>
+            <div class="bar-row" data-stage="5"><span class="bar-label">repeat 1</span><div class="bar-track"><div class="bar-fill low" style="width:92%"></div></div><span class="bar-val">.92</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">repeat 5</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">repeat 10</span><div class="bar-track"><div class="bar-fill mid" style="width:38%"></div></div><span class="bar-val">.38</span></div>
+            <div class="bar-row" data-stage="5"><span class="bar-label">repeat 20</span><div class="bar-track"><div class="bar-fill high" style="width:11%"></div></div><span class="bar-val">.11</span></div>
+            <div style="font-size:11px;color:#7090b0;font-family:Inter;margin-top:4px" data-stage="5">
+                Habituation curve. Same input, fading response.
+            </div>
+        `
     },
     {
         title: "Hippocampus: turning experience into memory",
@@ -606,7 +721,26 @@ const SCENES = [
             "Chip's hippocampus stores each episode indexed by its latent vector.",
             "When new input arrives, it pulls the three most relevant past episodes back into working memory through cosine similarity.",
             "It also watches for prediction errors and marks event boundaries, which is why you remember a car crash but forget the drive there."
-        ]
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="1">EPISODE = WHERE + WHO + FEEL</div>
+            <div class="mem-card" data-stage="1">2025-03-12 / corridor / unfamiliar door / curious</div>
+            <div class="mem-card" data-stage="1">2025-03-09 / lab / new person introduced / wary</div>
+            <div class="mem-card" data-stage="1">2025-03-04 / kitchen / dropped a glass / startled</div>
+
+            <div style="margin:12px 0;padding:10px;background:rgba(20,15,5,0.6);border-radius:6px;font-size:11px;color:#c0a070;font-family:Inter;line-height:1.5" data-stage="2">
+                <strong style="color:#e0af68">Patient H.M., 1953.</strong> Both hippocampi removed to stop seizures. He could remember his childhood. He could not form a single new conscious memory for the rest of his life.
+            </div>
+
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px" data-stage="4">RECALL: cosine similarity</div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">ep #142</span><div class="bar-track"><div class="bar-fill high" style="width:88%"></div></div><span class="bar-val">.88</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">ep #097</span><div class="bar-track"><div class="bar-fill mid" style="width:71%"></div></div><span class="bar-val">.71</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">ep #211</span><div class="bar-track"><div class="bar-fill mid" style="width:64%"></div></div><span class="bar-val">.64</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">ep #033</span><div class="bar-track"><div class="bar-fill low" style="width:22%"></div></div><span class="bar-val">.22</span></div>
+            <div style="font-size:11px;color:#9ece6a;font-family:Inter;margin-top:6px" data-stage="5">
+                Top 3 cross the threshold and enter working memory. The rest stay dormant.
+            </div>
+        `
     },
     {
         title: "Hypothalamus: the engine of motivation",
@@ -619,7 +753,22 @@ const SCENES = [
             "Energy, curiosity, safety, social engagement, coherence, and novelty.",
             "When any one of them drifts out of range, the hypothalamus generates a goal automatically.",
             "Curiosity reward comes straight from how surprised the world model was, which is the same dopaminergic loop you feel when something genuinely interesting happens."
-        ]
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="3">SIX DRIVES, LIVE</div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">energy</span><div class="bar-track"><div class="bar-fill mid" style="width:62%"></div></div><span class="bar-val">.62</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">curiosity</span><div class="bar-track"><div class="bar-fill high" style="width:81%"></div></div><span class="bar-val">.81</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">safety</span><div class="bar-track"><div class="bar-fill high" style="width:74%"></div></div><span class="bar-val">.74</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">social</span><div class="bar-track"><div class="bar-fill mid" style="width:48%"></div></div><span class="bar-val">.48</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">coherence</span><div class="bar-track"><div class="bar-fill high" style="width:79%"></div></div><span class="bar-val">.79</span></div>
+            <div class="bar-row" data-stage="4"><span class="bar-label">novelty</span><div class="bar-track"><div class="bar-fill low" style="width:18%"></div></div><span class="bar-val">.18</span></div>
+            <div style="margin-top:12px;padding:10px;background:rgba(15,5,25,0.6);border-radius:6px;font-size:11px;color:#c0a0e0;line-height:1.5;font-family:Inter" data-stage="5">
+                <strong style="color:#bb9af7">Drift out of range</strong> &rarr; goal fires automatically. Low novelty triggered <span class="slide-chip purple">explore_frontier</span> on this tick.
+            </div>
+            <div style="font-size:11px;color:#7090b0;font-family:Inter;margin-top:8px;line-height:1.5" data-stage="6">
+                Curiosity reward = surprise from the world model. The same dopaminergic loop that fires when something genuinely interesting happens to you.
+            </div>
+        `
     },
     {
         title: "Cerebrum: planning, language, identity",
@@ -631,7 +780,30 @@ const SCENES = [
             "A dual-actor soft actor-critic policy picks the next move.",
             "A reasoning chain only fires when meta-cognitive confidence drops, which keeps the lights on without burning compute on easy decisions.",
             "Inner speech runs in plain English, gets re-encoded back into the latent space, and anchors a stable identity across thousands of ticks."
-        ]
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="2">WORKING MEMORY (Miller, 1956)</div>
+            <div style="text-align:center;margin:6px 0" data-stage="2">
+                <span class="wm-slot filled">obs</span>
+                <span class="wm-slot filled">goal</span>
+                <span class="wm-slot filled">ep142</span>
+                <span class="wm-slot filled">ep097</span>
+                <span class="wm-slot filled">mood</span>
+                <span class="wm-slot">+</span>
+                <span class="wm-slot">+</span>
+            </div>
+            <div style="font-size:10px;color:#5a6a8a;text-align:center;font-family:Inter;font-style:italic;margin-bottom:10px" data-stage="2">7 ± 2 slots, same as the human limit</div>
+
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px;letter-spacing:1px" data-stage="3">DUAL-ACTOR SAC POLICY</div>
+            <div class="bar-row" data-stage="3"><span class="bar-label">actor A</span><div class="bar-track"><div class="bar-fill high" style="width:64%"></div></div><span class="bar-val">.64</span></div>
+            <div class="bar-row" data-stage="3"><span class="bar-label">actor B</span><div class="bar-track"><div class="bar-fill mid" style="width:51%"></div></div><span class="bar-val">.51</span></div>
+            <div class="bar-row" data-stage="3"><span class="bar-label">consensus</span><div class="bar-track"><div class="bar-fill high" style="width:59%"></div></div><span class="bar-val">.59</span></div>
+
+            <div style="margin-top:10px;padding:8px 10px;background:rgba(15,30,15,0.5);border-left:3px solid #9ece6a;border-radius:4px;font-size:11px;color:#a0c898;font-style:italic;line-height:1.5;font-family:Inter" data-stage="5">
+                "I should investigate further. Confidence is reasonable. Memory pattern matches."
+            </div>
+            <div style="font-size:10px;color:#5a6a8a;text-align:right;font-family:Inter;margin-top:2px" data-stage="5">- inner speech, tick 1247</div>
+        `
     },
     {
         title: "Cerebellum: the timing of skilled action",
@@ -643,7 +815,31 @@ const SCENES = [
             "A tennis swing. Speech timing. The micro-corrections in your fingers when you pick up a coffee cup.",
             "Chip's cerebellum smooths every chosen action with an exponential moving average so the output stops looking robotic.",
             "It also maintains a small skill library, so similar problems reuse the same motor primitives instead of being solved from scratch."
-        ]
+        ],
+        slide: `
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="1">NEURON COUNTS</div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">cerebellum</span><div class="bar-track"><div class="bar-fill high" style="width:69%"></div></div><span class="bar-val">69B</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">cerebrum</span><div class="bar-track"><div class="bar-fill mid" style="width:21%"></div></div><span class="bar-val">21B</span></div>
+            <div class="bar-row" data-stage="1"><span class="bar-label">all other</span><div class="bar-track"><div class="bar-fill low" style="width:10%"></div></div><span class="bar-val">~6B</span></div>
+            <div style="font-size:10px;color:#5a6a8a;font-family:Inter;font-style:italic;margin-bottom:10px">~86 billion neurons total. The cerebellum holds the majority.</div>
+
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 6px;letter-spacing:1px" data-stage="4">EMA SMOOTHING (raw vs out)</div>
+            <svg viewBox="0 0 320 80" style="margin-bottom:6px">
+                <polyline points="0,40 20,15 40,55 60,20 80,60 100,18 120,58 140,22 160,52 180,28 200,48 220,30 240,46 260,34 280,42 300,38 320,40" stroke="#f7768e" stroke-width="1.4" fill="none" opacity="0.7"/>
+                <polyline points="0,40 20,33 40,40 60,35 80,42 100,36 120,42 140,37 160,41 180,38 200,40 220,39 240,40 260,40 280,40 300,40 320,40" stroke="#9ece6a" stroke-width="2" fill="none"/>
+                <text x="4" y="12" fill="#f7768e" font-size="9" font-family="Courier New">raw</text>
+                <text x="4" y="76" fill="#9ece6a" font-size="9" font-family="Courier New">smoothed</text>
+            </svg>
+
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin:8px 0 4px;letter-spacing:1px" data-stage="5">SKILL LIBRARY</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;font-family:Courier New;font-size:10px" data-stage="5">
+                <span class="slide-chip green">approach_food</span>
+                <span class="slide-chip green">avoid_threat</span>
+                <span class="slide-chip green">return_shelter</span>
+                <span class="slide-chip green">explore_unknown</span>
+                <span class="slide-chip green">wait_observe</span>
+            </div>
+        `
     },
     {
         title: "Brainstem: silent life support",
@@ -654,7 +850,22 @@ const SCENES = [
             "You never thank it. You never even notice it.",
             "Chip's brainstem runs the SAC update, clips gradients, watches for NaNs, and writes a signed HMAC-SHA256 snapshot to disk every hundred ticks.",
             "Pull the plug, restart the process, and Chip wakes up exactly where it left off, with the same drives, the same memories, the same sense of self."
-        ]
+        ],
+        slide: `
+            <svg class="heartbeat-svg" viewBox="0 0 360 60" style="margin:4px 0 12px" data-stage="0">
+                <path d="M0,30 L40,30 L48,30 L52,10 L60,50 L68,30 L80,30 L120,30 L128,30 L132,10 L140,50 L148,30 L160,30 L200,30 L208,30 L212,10 L220,50 L228,30 L240,30 L280,30 L288,30 L292,10 L300,50 L308,30 L360,30"/>
+            </svg>
+
+            <div style="font-size:11px;color:#7090b0;font-family:Courier New;margin-bottom:6px;letter-spacing:1px" data-stage="3">AUTONOMIC LOOP</div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">SAC step</span><span class="slide-stage-desc">policy + value update</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">grad clip</span><span class="slide-stage-desc">norm cap = 1.0</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">NaN watch</span><span class="slide-stage-desc">rollback if dirty</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">snapshot</span><span class="slide-stage-desc">every 100 ticks, HMAC-SHA256</span></div>
+
+            <div style="margin-top:12px;padding:10px;background:rgba(5,15,25,0.6);border-radius:6px;font-size:11px;color:#a0d0e0;line-height:1.5;font-family:Inter" data-stage="4">
+                Crash, kill the process, reboot the host. Chip wakes up where it left off. Same drives. Same memories. Same sense of self.
+            </div>
+        `
     },
     {
         title: "One tick, end to end",
@@ -669,7 +880,19 @@ const SCENES = [
             "The cerebellum smooths the action vector before it leaves.",
             "The brainstem updates the policy and saves state.",
             "Input to output takes about one tick. No region imports another. They only publish typed signals on a shared bus, so any single piece can fail without dragging the rest down with it."
-        ]
+        ],
+        slide: `
+            <div class="slide-stage" data-stage="1"><span class="slide-stage-name">thalamus</span><span class="slide-stage-desc">encode 512-D</span></div>
+            <div class="slide-stage" data-stage="2"><span class="slide-stage-name">amygdala</span><span class="slide-stage-desc">valence + veto</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">hippocampus</span><span class="slide-stage-desc">recall top 3</span></div>
+            <div class="slide-stage" data-stage="4"><span class="slide-stage-name">hypothalamus</span><span class="slide-stage-desc">drive check</span></div>
+            <div class="slide-stage" data-stage="5"><span class="slide-stage-name">cerebrum</span><span class="slide-stage-desc">goal + action</span></div>
+            <div class="slide-stage" data-stage="6"><span class="slide-stage-name">cerebellum</span><span class="slide-stage-desc">EMA smooth</span></div>
+            <div class="slide-stage" data-stage="7"><span class="slide-stage-name">brainstem</span><span class="slide-stage-desc">SAC + save</span></div>
+            <div style="margin-top:12px;padding:10px;background:rgba(15,15,25,0.7);border-radius:6px;font-size:11px;color:#a0c0ff;line-height:1.5;font-family:Inter" data-stage="8">
+                Total wall-clock: ~80ms on CPU. Any region can fail and the rest keep running. The shared bus is the only contract.
+            </div>
+        `
     },
     {
         title: "What makes Chip different",
@@ -681,7 +904,27 @@ const SCENES = [
             "Memory replay does more than rehearse old episodes. It searches alternative trajectories from key decision points and keeps the better ones as synthetic memories.",
             "This is not a model that wakes up only when prompted.",
             "It runs whether you are watching or not, and it remembers what you said yesterday."
-        ]
+        ],
+        slide: `
+            <svg viewBox="0 0 360 160" style="margin-bottom:6px" data-stage="1">
+                <circle cx="180" cy="80" r="60" fill="none" stroke="#3a4a6a" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="180" y1="80" x2="240" y2="80" stroke="#7aa2f7" stroke-width="2.5" marker-end=""/>
+                <circle cx="240" cy="80" r="3" fill="#7aa2f7"/>
+                <text x="244" y="76" fill="#7aa2f7" font-size="9" font-family="Courier New">old belief</text>
+                <line x1="180" y1="80" x2="220" y2="35" class="belief-vec"/>
+                <circle cx="220" cy="35" r="3" fill="#bb9af7"/>
+                <text x="224" y="32" fill="#bb9af7" font-size="9" font-family="Courier New">new belief</text>
+                <text x="180" y="156" fill="#5a6a8a" font-size="9" text-anchor="middle" font-family="Inter" font-style="italic">SLERP rotates on the unit sphere</text>
+            </svg>
+
+            <div class="slide-stage" data-stage="2"><span class="slide-stage-name">identity</span><span class="slide-stage-desc">re-anchored every 100 ticks</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">replay</span><span class="slide-stage-desc">searches alt trajectories</span></div>
+            <div class="slide-stage" data-stage="3"><span class="slide-stage-name">synthetic mem</span><span class="slide-stage-desc">better outcomes saved back</span></div>
+
+            <div style="margin-top:12px;padding:10px;background:rgba(5,15,25,0.6);border-radius:6px;font-size:11px;color:#9ece6a;line-height:1.5;font-family:Inter;font-weight:bold" data-stage="5">
+                It runs whether you are watching or not. It remembers what you said yesterday.
+            </div>
+        `
     }
 ];
 
@@ -744,7 +987,7 @@ class TTSLoader {
     }
 }
 
-function attachSubtitles(audio, sentences) {
+function attachSubtitles(audio, sentences, stageEls) {
     const bar = document.getElementById('demo-subtitle-bar');
     bar.classList.add('visible');
     bar.innerHTML = '<div class="sub-line">' + escapeHtml(sentences[0]) + '</div>';
@@ -754,7 +997,16 @@ function attachSubtitles(audio, sentences) {
     let cum = 0;
     const boundaries = lengths.map(l => { cum += l; return cum / total; });
 
-    let lastIdx = 0;
+    // Pre-bucket stage elements by sentence index
+    const buckets = sentences.map(() => []);
+    if (stageEls) {
+        for (const el of stageEls) {
+            const idx = parseInt(el.dataset.stage, 10);
+            if (!isNaN(idx) && idx >= 0 && idx < buckets.length) buckets[idx].push(el);
+        }
+    }
+
+    let lastIdx = -1;
     const handler = () => {
         const dur = audio.duration;
         if (!isFinite(dur) || dur === 0) return;
@@ -764,6 +1016,21 @@ function attachSubtitles(audio, sentences) {
         if (idx !== lastIdx) {
             lastIdx = idx;
             bar.innerHTML = '<div class="sub-line">' + escapeHtml(sentences[idx]) + '</div>';
+            // Reveal stage elements up to and including this sentence
+            if (stageEls) {
+                for (let i = 0; i <= idx; i++) {
+                    for (const el of buckets[i]) {
+                        if (!el.classList.contains('lit')) {
+                            el.classList.add('lit');
+                            // Re-trigger card-slide animation for late reveals
+                            el.style.opacity = '';
+                            el.style.animation = 'none';
+                            void el.offsetWidth;
+                            el.style.animation = '';
+                        }
+                    }
+                }
+            }
         }
     };
     audio.addEventListener('timeupdate', handler);
@@ -823,6 +1090,10 @@ function stopDemo() {
     document.getElementById('demo-overlay').classList.remove('active');
     document.getElementById('demo-btn').textContent = '▶ Play Demo';
     document.getElementById('demo-loading').classList.remove('visible');
+    const slidePanel = document.getElementById('demo-slide');
+    slidePanel.classList.remove('visible');
+    slidePanel.classList.remove('swapping');
+    document.getElementById('slide-body').innerHTML = '';
     document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
     document.getElementById('demo-label').textContent = '';
     clearSubtitles();
@@ -850,6 +1121,19 @@ async function playScene(idx, token) {
     // Title bar
     document.getElementById('demo-label').textContent = scene.title || '';
 
+    // Slide panel: swap content with transition
+    const slidePanel = document.getElementById('demo-slide');
+    const slideHeader = document.getElementById('slide-h');
+    const slideBody = document.getElementById('slide-body');
+    slidePanel.classList.add('swapping');
+    setTimeout(() => {
+        if (token !== demoPlaybackToken) return;
+        slideHeader.textContent = scene.title || ('Chapter ' + (idx + 1));
+        slideBody.innerHTML = scene.slide || '';
+        slidePanel.classList.remove('swapping');
+        slidePanel.classList.add('visible');
+    }, 300);
+
     // Progress bar fills as we move through scenes
     const progress = ((idx + 1) / SCENES.length) * 100;
     document.getElementById('demo-progress').style.width = progress + '%';
@@ -862,6 +1146,11 @@ async function playScene(idx, token) {
     }
 
     clearSubtitles();
+
+    // Wait for the swap to settle so the slide DOM is in place before we light stages
+    await new Promise(r => setTimeout(r, 350));
+    if (token !== demoPlaybackToken) return;
+    const stageEls = Array.from(slideBody.querySelectorAll('[data-stage]'));
 
     if (demoVoiceEnabled && demoLoader) {
         let audio = demoLoader.audios[idx];
@@ -878,7 +1167,7 @@ async function playScene(idx, token) {
         if (audio) {
             window._currentTtsAudio = audio;
             audio.currentTime = 0;
-            demoSubtitleDetach = attachSubtitles(audio, scene.sentences);
+            demoSubtitleDetach = attachSubtitles(audio, scene.sentences, stageEls);
             audio.onended = () => {
                 if (token !== demoPlaybackToken) return;
                 clearSubtitles();
@@ -897,7 +1186,7 @@ async function playScene(idx, token) {
         }
     }
 
-    // Fallback when voice is off or audio failed: show subtitles on a fixed schedule.
+    // Fallback when voice is off or audio failed: show subtitles + reveal stages on a fixed schedule.
     const bar = document.getElementById('demo-subtitle-bar');
     bar.classList.add('visible');
     let i = 0;
@@ -909,6 +1198,10 @@ async function playScene(idx, token) {
             return;
         }
         bar.innerHTML = '<div class="sub-line">' + escapeHtml(scene.sentences[i]) + '</div>';
+        for (const el of stageEls) {
+            const sIdx = parseInt(el.dataset.stage, 10);
+            if (!isNaN(sIdx) && sIdx <= i) el.classList.add('lit');
+        }
         const dur = Math.max(2200, scene.sentences[i].length * 55);
         i++;
         setTimeout(showNext, dur);
