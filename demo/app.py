@@ -163,7 +163,7 @@ body::after {
 }
 
 /* Sidebar */
-#sidebar { width:280px; background:#08080f; border-right:1px solid #1a1a2e; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; z-index:10; }
+#sidebar { width:220px; min-width:220px; background:#08080f; border-right:1px solid #1a1a2e; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; z-index:10; height:100%; }
 #sidebar h2 { color:#7aa2f7; font-size:11px; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
 .nav-btn { display:block; padding:10px 14px; background:#0f0f1a; border:1px solid #1a1a2e; border-radius:6px; color:#7aa2f7; text-decoration:none; font-size:12px; transition:all 0.2s; cursor:pointer; text-align:left; }
 .nav-btn:hover, .nav-btn.active { background:#1a2a4a; border-color:#7aa2f7; box-shadow:0 0 12px rgba(122,162,247,0.2); }
@@ -299,7 +299,7 @@ body::after {
     <a class="nav-btn" href="/arena">Survival Arena</a>
     <a class="nav-btn" href="/voice">Voice Assistant</a>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;overflow:auto;position:relative;">
+<div style="flex:1;display:flex;flex-direction:row;overflow:hidden;position:relative;">
 
 <div id="sidebar">
     <h2>Mood</h2>
