@@ -10,14 +10,14 @@ Then open:
     http://localhost:8080/voice      — Voice assistant (Chip + LLM + TTS/STT)
 
 Dependencies (beyond chip-brain):
-    pip install flask
-
-Optional (for voice demo):
-    pip install RealtimeSTT KittenTTS
+    pip install flask edge-tts
 
 The voice demo uses your local LM Studio at http://10.0.0.20:1234/v1
 for language generation. Chip computes 9 cognitive factors in <100ms
 and shapes the LLM's response accordingly.
+
+The brain demo uses Microsoft's free Edge neural voices via edge-tts
+for narration (requires internet, no API key).
 """
 
 from __future__ import annotations
@@ -35,16 +35,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
-
-# KittenTTS needs eSpeak NG. On Windows it's installed at C:\Program Files\eSpeak NG\.
-# These env vars are picked up by the phonemizer library on first KittenTTS load.
-if sys.platform == "win32":
-    _ESPEAK_DIR = r"C:\Program Files\eSpeak NG"
-    _ESPEAK_LIB = os.path.join(_ESPEAK_DIR, "libespeak-ng.dll")
-    _ESPEAK_BIN = os.path.join(_ESPEAK_DIR, "espeak-ng.exe")
-    if os.path.isfile(_ESPEAK_LIB):
-        os.environ.setdefault("PHONEMIZER_ESPEAK_LIBRARY", _ESPEAK_LIB)
-        os.environ.setdefault("PHONEMIZER_ESPEAK_PATH", _ESPEAK_BIN)
 
 from flask import Flask, Response, request, jsonify
 
@@ -567,7 +557,7 @@ const SCENES = [
     { narr: "Persistent memory. Intrinsic motivation. Emotional homeostasis. This is how Chip thinks.", regions: ["cerebrum","amygdala","hippocampus","hypothalamus","thalamus","cerebellum","brainstem"], label: "This is how Chip thinks" },
 ];
 
-const VOICE = "expr-voice-5-m";
+const VOICE = "en-US-GuyNeural";
 
 let demoActive = false;
 let demoVoiceEnabled = true;
@@ -964,54 +954,76 @@ def brain_page():
     return BRAIN_HTML
 
 # ---------------------------------------------------------------------------
-# KittenTTS — neural narration for the brain demo
+# edge-tts — high-quality neural narration via Microsoft's Edge cloud voices.
+# Free, no API key needed, ~3KB/sec MP3 output. Requires internet.
 # ---------------------------------------------------------------------------
-_tts_model = None
 _tts_lock = threading.Lock()
 _tts_cache: Dict[str, bytes] = {}
 
-def get_tts():
-    global _tts_model
-    if _tts_model is None:
-        with _tts_lock:
-            if _tts_model is None:
-                from kittentts import KittenTTS
-                # Default constructor downloads the model from HF on first use
-                _tts_model = KittenTTS()
-    return _tts_model
+# Default voice — natural-sounding US male. Other good options:
+#   en-US-AriaNeural       (female, warm)
+#   en-US-GuyNeural        (male, professional)
+#   en-US-JennyNeural      (female, friendly)
+#   en-GB-RyanNeural       (UK male)
+#   en-AU-WilliamNeural    (AU male)
+DEFAULT_VOICE = "en-US-GuyNeural"
+
+
+def _generate_tts_sync(text: str, voice: str) -> bytes:
+    """Synchronously generate MP3 audio via edge-tts. Runs the async API in a fresh loop."""
+    import asyncio
+    import edge_tts
+
+    async def _run() -> bytes:
+        comm = edge_tts.Communicate(text, voice=voice)
+        chunks: list[bytes] = []
+        async for part in comm.stream():
+            if part.get("type") == "audio":
+                chunks.append(part["data"])
+        return b"".join(chunks)
+
+    # Run the async coroutine in this thread's event loop
+    try:
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_run())
+        finally:
+            loop.close()
+    except Exception:
+        # If we somehow already have a loop, fall back to a thread
+        import concurrent.futures
+        def _wrapper():
+            return asyncio.run(_run())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(_wrapper).result(timeout=30)
+
 
 @app.route("/tts")
 def tts():
-    """Generate audio for a text string using KittenTTS. Cached per-text."""
+    """Generate MP3 audio for a text string using edge-tts. Cached per-text."""
     text = request.args.get("text", "").strip()
-    voice = request.args.get("voice", "expr-voice-5-m")
+    voice = request.args.get("voice", DEFAULT_VOICE)
     if not text:
         return Response(b"", status=400)
 
     cache_key = f"{voice}:{text}"
     if cache_key in _tts_cache:
-        return Response(_tts_cache[cache_key], mimetype="audio/wav")
+        return Response(_tts_cache[cache_key], mimetype="audio/mpeg")
 
-    try:
-        import io
-        import wave
-        import numpy as np
-        model = get_tts()
-        audio = model.generate(text, voice=voice)
-        # Convert numpy array to WAV bytes
-        buf = io.BytesIO()
-        with wave.open(buf, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)  # 16-bit
-            wf.setframerate(24000)  # KittenTTS default
-            audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
-            wf.writeframes(audio_int16.tobytes())
-        wav_bytes = buf.getvalue()
-        _tts_cache[cache_key] = wav_bytes
-        return Response(wav_bytes, mimetype="audio/wav")
-    except Exception as e:
-        print(f"[TTS] error: {e}")
-        return Response(str(e).encode(), status=500)
+    # Serialize generation so we don't fire 15 parallel network requests on demo start
+    with _tts_lock:
+        # Re-check cache inside lock (another thread may have generated it)
+        if cache_key in _tts_cache:
+            return Response(_tts_cache[cache_key], mimetype="audio/mpeg")
+        try:
+            mp3_bytes = _generate_tts_sync(text, voice)
+            if not mp3_bytes:
+                return Response(b"empty audio", status=500)
+            _tts_cache[cache_key] = mp3_bytes
+            return Response(mp3_bytes, mimetype="audio/mpeg")
+        except Exception as e:
+            print(f"[TTS] error: {type(e).__name__}: {e}")
+            return Response(str(e).encode(), status=500)
 
 @app.route("/brain/stream")
 def brain_stream():
