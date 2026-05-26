@@ -2,6 +2,28 @@
 
 All notable changes to Chip are documented here.
 
+## [1.0.1] - 2026-05-25
+
+### Demo
+- Brain visualizer: 10-chapter narrated slideshow with per-chapter animated slide panels
+- Each chapter has sentence-level subtitles synced to TTS audio via `timeupdate`
+- Progressive chunked TTS loading: chapter 1 plays immediately, later chapters prefetch in background
+- Slide panels reveal content progressively as narration hits each sentence (`data-stage` system)
+- Chapters cover: thalamus gating, amygdala dual-route, hippocampal H.M. case, hypothalamic drives, cerebrum WM + SAC, cerebellum EMA + skill library, brainstem autonomic loop, full tick pipeline, structural comparison vs LLMs, problem statement, full recap
+- Replaced KittenTTS with edge-tts (Microsoft Edge neural voices, free, no API key, MP3 output)
+- TTS requests serialized with lock + per-text cache to prevent parallel hammering
+- Brain page layout fixed: stats sidebar (Mood, Drives, WM, Goals, Inner Speech) sits beside brain, not above it
+- Shared nav sidebar on all three demo pages
+
+### Repo hygiene
+- Added `*.db`, `*.db-shm`, `*.db-wal`, `.omnimemory/`, `.memory/`, `.code-graph/` to `.gitignore`
+- Removed tracked `.omnimemory/graph.db*` files from history
+
+### CI/CD
+- Fixed GHCR Docker tag: repository path now fully lowercase (`doorman11991/chip`)
+- Added `--skip-existing` to twine upload so re-tagging an already-published version does not fail
+- Added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` to suppress Node.js 20 deprecation warnings
+
 ## [1.0.0] — 2026-05-25
 
 ### Architecture
