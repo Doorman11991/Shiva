@@ -1342,7 +1342,7 @@ body { background:#0a0a0f; color:#e0e0e0; font-family:'Courier New',monospace; d
 </div>
 <script>
 let autoInterval = null;
-function autoRun() { if(autoInterval){clearInterval(autoInterval);autoInterval=null;} else {autoInterval=setInterval(()=>fetch('/arena/step'),500);} }
+function autoRun() { if(autoInterval){clearInterval(autoInterval);autoInterval=null;} else {autoInterval=setInterval(()=>fetch('/arena/step'),1000);} }
 const evtSource = new EventSource('/arena/stream');
 evtSource.onmessage = (e) => {
     const d = JSON.parse(e.data);
@@ -1665,7 +1665,7 @@ def arena_stream():
             goal = goal_obj.name if goal_obj else "none"
             data = json.dumps(arena.to_dict(mood=mood, goal=goal))
             yield f"data: {data}\n\n"
-            time.sleep(0.3)
+            time.sleep(1.0)
     return Response(gen(), mimetype="text/event-stream")
 
 @app.route("/arena/step")

@@ -188,6 +188,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 
     # Inner speech
     "inner_speech_every": 25,
+
+    # Rate limiting — minimum seconds between ticks (0 = unlimited).
+    # Set to ~0.1 to cap at ~10 ticks/sec and prevent GPU saturation.
+    "min_tick_interval": 0.1,
 }
 
 
@@ -462,6 +466,17 @@ class ChipBrain:
             (1, action_dim) smoothed action tensor.
         """
         assert self._booted, "Call brain.boot() before brain.tick()"
+
+        # Rate-limit: don't fire more than one tick per MIN_TICK_INTERVAL seconds.
+        # Prevents rapid HTTP requests from pegging the GPU at 100%.
+        now = time.time()
+        elapsed = now - getattr(self, '_last_tick_time', 0.0)
+        if elapsed < self.cfg.get("min_tick_interval", 0.0):
+            # Return the last action without running a full forward pass.
+            if self._last_action is not None:
+                return self._last_action
+        self._last_tick_time = time.time()
+
         self._tick += 1
         self.memory.set_current_step(self._tick)
         self.health.tick()
