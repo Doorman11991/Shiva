@@ -36,6 +36,16 @@ sys.path.insert(0, str(ROOT))
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 
+# KittenTTS needs eSpeak NG. On Windows it's installed at C:\Program Files\eSpeak NG\.
+# These env vars are picked up by the phonemizer library on first KittenTTS load.
+if sys.platform == "win32":
+    _ESPEAK_DIR = r"C:\Program Files\eSpeak NG"
+    _ESPEAK_LIB = os.path.join(_ESPEAK_DIR, "libespeak-ng.dll")
+    _ESPEAK_BIN = os.path.join(_ESPEAK_DIR, "espeak-ng.exe")
+    if os.path.isfile(_ESPEAK_LIB):
+        os.environ.setdefault("PHONEMIZER_ESPEAK_LIBRARY", _ESPEAK_LIB)
+        os.environ.setdefault("PHONEMIZER_ESPEAK_PATH", _ESPEAK_BIN)
+
 from flask import Flask, Response, request, jsonify
 
 from brain import ChipBrain
@@ -567,7 +577,10 @@ function toggleDemo() {
 function toggleVoice() {
     demoVoiceEnabled = !demoVoiceEnabled;
     document.getElementById('voice-btn').textContent = demoVoiceEnabled ? '🔊 Voice ON' : '🔇 Voice OFF';
-    if (!demoVoiceEnabled) window.speechSynthesis.cancel();
+    if (!demoVoiceEnabled && window._currentTtsAudio) {
+        window._currentTtsAudio.pause();
+        window._currentTtsAudio = null;
+    }
 }
 
 function startDemo() {
@@ -586,21 +599,23 @@ function stopDemo() {
     document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
     document.getElementById('demo-label').textContent = '';
     document.getElementById('demo-thought').textContent = '';
-    window.speechSynthesis.cancel();
+    if (window._currentTtsAudio) {
+        window._currentTtsAudio.pause();
+        window._currentTtsAudio = null;
+    }
 }
 
 function speak(text) {
     if (!demoVoiceEnabled) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.95;
-    u.pitch = 1.0;
-    u.volume = 1.0;
-    // Prefer a more natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => /natural|neural|aria|guy|jenny|david/i.test(v.name)) || voices[0];
-    if (preferred) u.voice = preferred;
-    window.speechSynthesis.speak(u);
+    // Stop any currently-playing audio
+    if (window._currentTtsAudio) {
+        window._currentTtsAudio.pause();
+        window._currentTtsAudio = null;
+    }
+    const audio = new Audio('/tts?text=' + encodeURIComponent(text));
+    audio.volume = 1.0;
+    audio.play().catch(err => console.warn('TTS playback failed:', err));
+    window._currentTtsAudio = audio;
 }
 
 function runDemoLoop() {
@@ -919,6 +934,56 @@ a:hover{background:#1a2a3a;border-color:#7aa2f7;}h1{margin-bottom:24px;}</style>
 @app.route("/brain")
 def brain_page():
     return BRAIN_HTML
+
+# ---------------------------------------------------------------------------
+# KittenTTS — neural narration for the brain demo
+# ---------------------------------------------------------------------------
+_tts_model = None
+_tts_lock = threading.Lock()
+_tts_cache: Dict[str, bytes] = {}
+
+def get_tts():
+    global _tts_model
+    if _tts_model is None:
+        with _tts_lock:
+            if _tts_model is None:
+                from kittentts import KittenTTS
+                # Default constructor downloads the model from HF on first use
+                _tts_model = KittenTTS()
+    return _tts_model
+
+@app.route("/tts")
+def tts():
+    """Generate audio for a text string using KittenTTS. Cached per-text."""
+    text = request.args.get("text", "").strip()
+    voice = request.args.get("voice", "expr-voice-2-f")
+    if not text:
+        return Response(b"", status=400)
+
+    cache_key = f"{voice}:{text}"
+    if cache_key in _tts_cache:
+        return Response(_tts_cache[cache_key], mimetype="audio/wav")
+
+    try:
+        import io
+        import wave
+        import numpy as np
+        model = get_tts()
+        audio = model.generate(text, voice=voice)
+        # Convert numpy array to WAV bytes
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(24000)  # KittenTTS default
+            audio_int16 = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
+            wf.writeframes(audio_int16.tobytes())
+        wav_bytes = buf.getvalue()
+        _tts_cache[cache_key] = wav_bytes
+        return Response(wav_bytes, mimetype="audio/wav")
+    except Exception as e:
+        print(f"[TTS] error: {e}")
+        return Response(str(e).encode(), status=500)
 
 @app.route("/brain/stream")
 def brain_stream():

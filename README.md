@@ -1,70 +1,55 @@
-﻿# Chip — A Brain-Anatomical Proto-AGI
+﻿# Chip: A Brain-Anatomical Proto-AGI
 
-Chip is a pure-Python cognitive engine modelled after the human brain. Every module lives in the brain region it belongs to, communicates through typed signals on a central bus, and can be disabled without crashing the system.
+Chip runs as a pure-Python cognitive engine that follows the layout of a real brain. Modules sit inside their matching regions, pass typed signals across a shared bus, and can drop out without taking the rest of the system down.
 
-It doesn't generate text. It doesn't call APIs. It *thinks* — in a 512-dimensional latent space where observations, emotions, memories, goals, and actions all share the same geometry.
+The engine does not output text or hit external APIs during its core loop. It builds internal states in one 512-dimensional space so observations, valence, stored episodes, active goals, and chosen actions can be compared directly with cosine similarity.
 
 ## Installation
 
+Install the package the usual way:
+
 ```bash
-# Option 1: pip (recommended)
 pip install chip-brain
+```
 
-# Option 2: Docker
+Run the pre-built image if you prefer containers:
+
+```bash
 docker run -it ghcr.io/doorman11991/chip:latest
+```
 
-# Option 3: From source
+Clone the repo when you want to modify things:
+
+```bash
 git clone https://github.com/Doorman11991/Chip.git
 cd Chip
 pip install torch transformers
-
-# (Optional) Copy the env template
 cp .env.example .env
-
-# Verify everything works
-python -c "from brain import ChipBrain; print(ChipBrain())"
 ```
 
-**Requirements:**
-- Python 3.10–3.13 (3.14 has known numpy issues on Windows)
-- PyTorch 2.0+
-- HuggingFace Transformers 4.30+
+The Granite-125m embedding model downloads on first use and stays cached. The Docker build already includes it.
 
-**Optional (for GPU acceleration):**
-- CUDA toolkit (NVIDIA)
-- DirectML (AMD on Windows)
-- MPS (Apple Silicon — automatic)
-
-The first call to the text encoder downloads IBM Granite-125m (~250MB) from HuggingFace. After that it's cached locally and loads in ~5 seconds. The Docker image pre-caches it at build time.
+You need Python 3.10 through 3.13, PyTorch 2.0 or newer, and Transformers 4.30+. GPU paths work for NVIDIA via CUDA, AMD on Windows through DirectML, and Apple Silicon through MPS.
 
 ## Quick Start
 
+Launch the interactive console:
+
 ```bash
-# Interactive session — just talk to it
 python run.py
 ```
 
+A short session looks like this:
+
 ```
-  Chip Brain — Interactive Session
-
-  Commands:
-    [text]     Feed an observation to the brain
-    status     Show brain state
-    mood       Show current mood and drives
-    thoughts   Show recent inner speech
-    goals      Show active goals
-    memory     Show memory stats
-    save       Force save to disk
-    quit       Save and exit
-
 you > I notice something strange in the corner of the room.
 
   [tick 1] mood=Calm, confidence=0.49, |action|=0.42
-  thought: "I notice this feels novel. There is also a sense of risky."
+  thought: "This feels new. Also kind of risky."
 
 you > thoughts
 
-  [Calm] I notice this feels novel. There is also a sense of risky.
+  [Calm] This feels new. Also kind of risky.
 
 you > status
 
@@ -76,88 +61,72 @@ you > status
   wm slots:   3/7
 ```
 
-### As a Python library
+Use it from Python code the same way:
 
 ```python
 from brain import ChipBrain
 
 brain = ChipBrain().boot()
-
-# One cognitive tick from a text observation:
 action = brain.tick("I see an unfamiliar door at the end of the corridor.")
-
-# Feed reward, advance training:
 brain.train_step(reward=0.5, done=False)
-
-# Save state to disk:
 brain.shutdown()
 ```
 
-## Requirements
-
-```
-pip install torch transformers
-```
-
-That's it. Two dependencies. Everything else is built from scratch.
-
-## Architecture
+## Project Layout
 
 ```
 Chip/
-├── brain.py                 ← Consciousness loop (top-level orchestrator)
-├── interfaces/              ← White matter: ABCs, SignalBus, plugin slots
-├── thalamus/                ← Sensory relay: granite encoder, transformer backbone, attention bottleneck
-├── amygdala/                ← Emotion: valence, fear veto, habituation, arousal modulation
-├── hippocampus/             ← Memory: episodic store, recall, dreams, boundary detection, cognitive maps
-├── hypothalamus/            ← Drives: homeostasis, curiosity, energy, entropy temperature
-├── cerebrum/                ← Cognition: policy, working memory, world model, reasoning, goals, inner speech
-├── cerebellum/              ← Coordination: action smoothing, skill library, swarm consensus, emotional contagion
-├── brainstem/               ← Life support: training loop, health monitor, persistence, scheduling
-├── locomotion/              ← Network migration (cognitive snapshot serialisation)
-└── parasite/                ← Parasitic knowledge extraction from black-box models
+├── brain.py
+├── interfaces/
+├── thalamus/
+├── amygdala/
+├── hippocampus/
+├── hypothalamus/
+├── cerebrum/
+├── cerebellum/
+├── brainstem/
+├── locomotion/
+└── parasite/
 ```
 
-## How It Works
+Each folder holds the logic that belongs to that brain area.
 
-Everything is a 512-D vector on a unit sphere. Text, emotions, memories, actions, goals — all in the same space. Cosine similarity = semantic relatedness.
+## One Tick, End to End
 
-**One tick flows like this:**
+Text arrives at the thalamus and gets turned into a 512-D vector by Granite-125m. A transformer backbone plus attention bottleneck keeps only the strongest signals while top-down queries from the cerebrum steer focus.
 
-1. **Thalamus** — Text enters via IBM Granite-125m (768→512 projection). Transformer backbone filters and routes tokens. Attention bottleneck selects the top-k most salient. Top-down query from previous tick's cerebrum biases what passes through.
+The amygdala scores valence quickly, dampens repeats through habituation, and can block actions that look dangerous.
 
-2. **Amygdala** — Fast emotional assessment (valence network). Habituation dampens repeated stimuli. Arousal gain signal sent to thalamus. Fear assessor can veto dangerous actions.
+The hippocampus pulls the three most relevant past episodes into working memory, watches for sudden prediction errors that mark event boundaries, and keeps a running map of explored regions in latent space.
 
-3. **Hippocampus** — Retrieves top-3 relevant past episodes into working memory. Boundary detector auto-segments the stream via prediction-error spikes. Temporal abstractor compresses across timescales. Cognitive map tracks explored latent regions.
+The hypothalamus tracks six drives and picks which one matters most right now. Curiosity reward comes straight from how surprised the world model is.
 
-4. **Hypothalamus** — 6-dim drive vector (arousal, energy, safety, engagement, curiosity, coherence). Curiosity reward from world model prediction error. Drive arbitrator picks the most urgent need. Entropy temperature adjusts exploration.
+Inside the cerebrum, seven working-memory slots hold the current context. A dual-actor SAC policy picks the next move while a light reasoning chain fires only when confidence drops. Inner speech gets generated in plain English, re-encoded, and used to keep identity stable. Goals stack hierarchically so high-level aims break into concrete sub-steps.
 
-5. **Cerebrum** — Working memory (7 slots). Policy selects action via dual-actor SAC with personality bias. Meta-cognition checks confidence; if low, fires 3-step reasoning chain. Inner speech surfaces thoughts in language. Contradiction detector checks new evidence against core beliefs. Goal stack manages hierarchical sub-goal planning.
+The cerebellum smooths the chosen action with exponential moving average and pulls matching skills from a small library.
 
-6. **Cerebellum** — Action smoothing (EMA). Skill library retrieval. Swarm consensus (if multi-node). Emotional contagion across nodes.
+The brainstem runs the SAC update, clips gradients, watches for NaNs, and writes a signed snapshot to disk every N ticks.
 
-7. **Brainstem** — SAC training update. Gradient clipping. Health monitoring (NaN detection). Periodic autosave to disk with HMAC-signed snapshots.
+## Design Choices That Actually Matter
 
-## Key Design Decisions
+Everything shares one latent sphere. No extra projection layers sit between modalities.
 
-**One latent space.** No translation layers between modalities. Everything projects into the same 512-D sphere so any two things can be compared by dot product.
+Regions never import one another. They only publish `NeuralSignal` objects onto a priority bus. That keeps the code testable and lets you disable pieces without side effects.
 
-**Signal bus, not imports.** Brain regions never import each other. They publish typed `NeuralSignal` objects on a priority-ordered bus. This makes the system testable, observable, and gracefully degradable.
+World-model training uses detached latents so it cannot fight the policy optimizer for the same representation.
 
-**Stop-gradient boundaries.** The world model trains on detached latents so it can't fight the policy optimizer for the backbone's representation.
+Every hundred ticks the brain writes a short English description of its current state, encodes it again, and anchors the identity token. This stops slow drift in the latent space.
 
-**Periodic language grounding.** Every 100 ticks, the brain translates its internal state into English ("I feel calm and curious"), encodes it with granite, and anchors the identity token to it. The subconscious drifts in language-grounded space, not arbitrary latent drift.
+When fresh evidence contradicts a stored belief, the embedding rotates on the sphere with spherical linear interpolation instead of snapping. Small contradictions stay quiet. Large ones trigger deliberate review.
 
-**SLERP belief revision.** When new evidence contradicts a core belief, the belief embedding rotates on the unit sphere via spherical linear interpolation. Small contradictions → quiet revision. Large contradictions → narrative crisis that forces deliberation.
+The hippocampus does more than replay. It finds key decision points, asks the world model for alternative trajectories, scores them, and keeps the better ones as new synthetic memories.
 
-**Active dreaming.** The hippocampus doesn't just replay memories — it identifies key decision points, imagines alternative actions via the world model, evaluates the counterfactual trajectories, and stores the best as synthetic memories. Creativity from imagination.
+## Adding Your Own Pieces
 
-## Plugin Slots
-
-Chip is designed to be embedded in a larger system. The host application provides:
+Drop in tools, environments, sensors, or reward sources through the plugin interfaces.
 
 ```python
-from interfaces.plugins import ITool, ToolRegistry, IEnvironment
+from interfaces.plugins import ITool, ToolRegistry
 
 class MyTool(ITool):
     name = "search"
@@ -166,53 +135,30 @@ class MyTool(ITool):
 brain = ChipBrain(tool_registry=ToolRegistry()).boot()
 ```
 
-Available extension points:
-- `ITool` / `ToolRegistry` — external tool dispatch
-- `IEnvironment` — step-based environment loop
-- `ISensor` — custom sensory modality
-- `IRewardSource` — external reward signal
-- `HookRegistry` — observe brain events (inner speech, contradictions, boundaries)
+## Saving State
 
-## Persistence
-
-The brain autosaves to `.chip_state/` every N ticks:
-- HMAC-SHA256 signed snapshots (tamper-proof)
-- Atomic writes (crash-safe)
-- Rolling backups (corruption recovery)
-- Auto-restore on boot
-
-```python
-brain.save()      # manual save
-brain.shutdown()  # save + cleanup
-```
+Snapshots land in `.chip_state/` with HMAC-SHA256 signatures, atomic writes, and rolling backups. Boot restores the last clean state automatically. Call `brain.save()` or `brain.shutdown()` whenever you want manual control.
 
 ## Tests
 
-```
-python scripts/e2e_brain_test.py                    # full brain against LM Studio endpoint
-python scripts/example_granite_integration.py       # granite embedder demo
-python scripts/test_feature_episodic_recall.py      # inference-time memory retrieval
-python scripts/test_feature_topdown_attention.py    # corticothalamic feedback loop
-python scripts/test_feature_persistence.py          # save/restore/crash recovery
-python scripts/test_feature_inner_speech.py         # internal monologue
-python scripts/test_feature_self_consistency.py     # contradiction detection + belief revision
-python scripts/test_feature_stability_fixes.py      # stop-gradient + Platt calibration
-python scripts/test_feature_goal_stack.py           # hierarchical sub-goal planning
-python scripts/test_feature_habit_boundary.py       # habituation + episodic boundaries
-python scripts/test_feature_contagion_dreaming.py   # emotional contagion + active dreaming
+One hundred ninety-one tests cover the full loop, memory retrieval, contradiction handling, persistence after crashes, inner speech, and active dreaming.
+
+Run the main suite with:
+
+```bash
+python scripts/e2e_brain_test.py
 ```
 
-191 tests. All passing.
+## What Chip Is Not
 
-## What This Is Not
+It is not a chatbot that produces replies on demand.
 
-- Not a chatbot. It doesn't generate text.
-- Not a LangChain wrapper. No API calls in the loop.
-- Not a research toy. It persists state, handles crashes, and scales.
-- Not finished. It needs a real training environment to become intelligent.
+It is not a thin wrapper around LangChain or any API-calling framework.
 
-The architecture is complete. The intelligence emerges from training.
+It is not a throwaway research script that loses state the moment the process ends.
+
+The architecture already handles persistence, graceful degradation, and clean restarts. Real capability will come once it trains inside richer environments.
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

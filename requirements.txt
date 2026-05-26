@@ -1,2 +1,10 @@
 torch>=2.0
 transformers>=4.30
+
+# Optional — for the voice-narrated brain demo (demo/app.py)
+# Also requires eSpeak NG installed system-wide:
+#   Windows: winget install eSpeak-NG.eSpeak-NG
+#   macOS:   brew install espeak-ng
+#   Linux:   apt install espeak-ng
+flask
+kittentts
