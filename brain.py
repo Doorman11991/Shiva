@@ -256,6 +256,16 @@ class ChipBrain:
 
         print(f"[ChipBrain] booting on {describe_device(self.device_str)}")
 
+        # First-run GPU setup: if .chip_device doesn't exist, run detection now.
+        from pathlib import Path as _Path
+        if not _Path(".chip_device").exists():
+            try:
+                from setup_device import setup as _setup_device
+                print("[ChipBrain] First run: detecting GPU...")
+                _setup_device()
+            except Exception as _e:
+                print(f"[ChipBrain] GPU setup skipped: {_e}")
+
         # ---- Signal bus ------------------------------------------------
         self.bus = SignalBus()
         for region in ("thalamus", "amygdala", "hippocampus", "hypothalamus",
@@ -425,6 +435,10 @@ class ChipBrain:
                       f"schema={restored['schema_version']})")
                 self.hooks.fire("restore", restored)
 
+        # Warm up the async granite encoder so the first tick doesn't block.
+        from thalamus.granite_embedder import get_embedder
+        get_embedder().warmup("chip brain online")
+
         print(f"[ChipBrain] all regions online. tick() ready.")
         return self
 
@@ -527,12 +541,13 @@ class ChipBrain:
         recall_query: Optional[torch.Tensor] = None
         if isinstance(observation, str):
             from thalamus.granite_embedder import get_embedder
+            # encode() returns the cached result from the async pipeline —
+            # same text as the thalamus encode, so this is a free cache hit.
             recall_query = get_embedder().encode(observation).detach()
         elif isinstance(observation, list) and observation and isinstance(observation[0], str):
             from thalamus.granite_embedder import get_embedder
             recall_query = get_embedder().encode(observation).mean(dim=0).detach()
         else:
-            # Tensor observation: use the pooled latent (best we have)
             recall_query = z_pooled.squeeze(0).detach()
 
         n_recalled = self.recall.inject_into_working_memory(
@@ -706,13 +721,19 @@ class ChipBrain:
         )
         if should_speak:
             from thalamus.granite_embedder import get_embedder
+            _emb = get_embedder()
+            # Use encode_now so inner speech always encodes the current thought
+            # text synchronously, bypassing the 1-tick async lag.
+            class _SyncWrapper:
+                def encode(self, text, **kw):
+                    return _emb.encode_now(text)
             thought = self.inner_speech.speak(
                 tick=self._tick,
                 z_conscious=z_conditioned.squeeze(0).detach(),
                 mood=mood_name,
                 homeostasis_errors=errors,
                 concept_grounder=self.concepts,
-                embedder=get_embedder(),
+                embedder=_SyncWrapper(),
                 working_memory=self.working_mem,
                 trigger=speech_trigger,
             )
@@ -1115,6 +1136,12 @@ class ChipBrain:
         """Save final state and emit a shutdown hook. Call before process exit."""
         ok = self.save()
         self.hooks.fire("shutdown", {"tick": self._tick, "saved": ok})
+        # Shut down the async granite encoder thread cleanly.
+        try:
+            from thalamus.granite_embedder import get_embedder
+            get_embedder().shutdown()
+        except Exception:
+            pass
         return ok
 
     def __repr__(self) -> str:

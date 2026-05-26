@@ -17,25 +17,36 @@ GraniteEmbedder uses a process-wide singleton with lazy loading:
 
     - First call to `get_embedder()` loads the model.
     - Every subsequent call reuses the same instance.
-    - The 768→512 projection layer is part of the singleton, so its weights
+    - The 768->512 projection layer is part of the singleton, so its weights
       are stable across the lifetime of the process.
 
-Design constraints
-~~~~~~~~~~~~~~~~~~
-    • Pure Python — only `transformers` and `torch`.
-    • Auto device pick: CUDA → MPS → CPU (mirrors brainstem.device priorities,
-      minus DirectML which the HF stack does not support natively).
-    • Deterministic projection (seeded), so the same text always maps to the
-      same Chip-space vector across processes when you save/load weights.
-    • Mean pooling over the last hidden state with attention-mask weighting,
-      so padding tokens don't dilute the embedding.
+Async encoding
+~~~~~~~~~~~~~~
+Granite runs on a dedicated background thread. The tick loop submits an
+encode job and immediately gets back the result from the *previous* tick
+(1-tick lag). This removes the ~20ms granite forward pass from the
+critical path entirely.
+
+    tick N:   submit("new obs")  ->  returns result of tick N-1
+    tick N+1: submit("next obs") ->  returns result of tick N
+
+The lag is imperceptible for cognitive processing. If the background
+thread hasn't finished yet (e.g. first tick), encode() blocks until
+the result is ready.
+
+Device selection
+~~~~~~~~~~~~~~~~
+Reads .chip_device (written by setup_device.py) to pick the right
+backend. Falls back to the same CUDA -> MPS -> CPU priority chain
+if the config file is absent.
 """
 
 from __future__ import annotations
 
+import concurrent.futures
 import threading
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import torch
 import torch.nn as nn
@@ -43,33 +54,25 @@ import torch.nn.functional as F
 
 
 # ---------------------------------------------------------------------------
-# Module-level constants
+# Constants
 # ---------------------------------------------------------------------------
 
-# IBM's official model id on the Hugging Face Hub.
 _GRANITE_MODEL_ID = "ibm-granite/granite-embedding-125m-english"
-
-# Granite outputs 768-D vectors; Chip's unified latent space is 512-D.
 _GRANITE_HIDDEN_DIM = 768
-_Chip_LATENT_DIM = 512
+_CHIP_LATENT_DIM = 512
 
-# Local checkpoint directory under the project root, if any. The user can drop
-# a HF-format snapshot here to run fully offline. The GGUF blob in the parent
-# folder is for llama.cpp and cannot be loaded by `transformers`.
 _LOCAL_DIR_NAMES = (
     "granite-embedding-125m-english",
     "models/granite-embedding-125m-english",
     "../granite-embedding-125m-english",
 )
 
-
 # ---------------------------------------------------------------------------
-# Singleton state (one shared embedder per process)
+# Singleton state
 # ---------------------------------------------------------------------------
 
 _singleton_lock = threading.Lock()
 _singleton: Optional["GraniteEmbedder"] = None
-
 
 # ---------------------------------------------------------------------------
 # Device selection
@@ -77,16 +80,68 @@ _singleton: Optional["GraniteEmbedder"] = None
 
 def _pick_device() -> torch.device:
     """
-    Pick the best torch device for HF transformer inference.
+    Pick the best device for granite inference.
 
-    Priority: CUDA → MPS → CPU. (DirectML is intentionally skipped here —
-    transformers' attention kernels target CUDA/CPU/MPS only.)
+    Priority (from .chip_device config if present):
+        directml -> cuda -> rocm -> mps -> ipex -> cpu
+
+    Falls back to CUDA -> MPS -> CPU if no config file exists.
     """
+    # Try reading the config written by setup_device.py
+    config_path = Path(".chip_device")
+    if config_path.exists():
+        try:
+            import json
+            with open(config_path) as f:
+                cfg = json.load(f)
+            backend = cfg.get("backend", "cpu")
+            verified = cfg.get("verified", False)
+            if verified and backend != "cpu":
+                return _backend_to_device(backend)
+        except Exception:
+            pass
+
+    # Fallback: probe in priority order
     if torch.cuda.is_available():
         return torch.device(f"cuda:{torch.cuda.current_device()}")
+    try:
+        import torch_directml  # type: ignore
+        if torch_directml.device_count() > 0:
+            return torch.device(str(torch_directml.device()))
+    except ImportError:
+        pass
     mps = getattr(getattr(torch, "backends", None), "mps", None)
     if mps is not None and mps.is_available() and mps.is_built():
         return torch.device("mps")
+    return torch.device("cpu")
+
+
+def _backend_to_device(backend: str) -> torch.device:
+    """Convert a backend string from .chip_device to a torch.device."""
+    if backend == "cuda":
+        if torch.cuda.is_available():
+            return torch.device(f"cuda:{torch.cuda.current_device()}")
+    if backend == "directml":
+        try:
+            import torch_directml  # type: ignore
+            if torch_directml.device_count() > 0:
+                return torch.device(str(torch_directml.device()))
+        except ImportError:
+            pass
+    if backend == "rocm":
+        # ROCm exposes through the CUDA API
+        if torch.cuda.is_available():
+            return torch.device(f"cuda:{torch.cuda.current_device()}")
+    if backend == "mps":
+        mps = getattr(getattr(torch, "backends", None), "mps", None)
+        if mps is not None and mps.is_available():
+            return torch.device("mps")
+    if backend == "ipex":
+        try:
+            import intel_extension_for_pytorch  # type: ignore
+            return torch.device("xpu")
+        except ImportError:
+            pass
     return torch.device("cpu")
 
 
@@ -99,20 +154,24 @@ class GraniteEmbedder(nn.Module):
     Granite-125m-English wrapped as a Chip sensory encoder.
 
     Pipeline:
-        text → tokeniser → granite encoder → masked-mean-pool → L2 norm →
-        Linear(768 → 512) → L2 norm  →  z ∈ ℝ^512
+        text -> tokeniser -> granite encoder -> masked-mean-pool -> L2 norm ->
+        Linear(768 -> 512) -> L2 norm  ->  z in R^512
 
-    The final L2 normalisation makes cosine similarity equal to a dot product
-    and keeps the projected vectors on a unit hyper-sphere — the same surface
-    the rest of Chip's latent space is calibrated against.
+    Async mode (default):
+        encode() submits the job to a background thread and returns the
+        result from the previous call. First call blocks until ready.
+        This removes granite from the critical tick path.
+
+    Sync mode (async_encode=False):
+        encode() blocks until the result is ready. Used in tests and
+        for inner_speech where the thought text is generated on the fly.
 
     Args:
-        model_id_or_path:  HF model id, or local directory path. Defaults to
-                           a local snapshot if found, otherwise the hub id.
+        model_id_or_path:  HF model id, or local directory path.
         device:            Torch device override; auto-picked when None.
         max_seq_len:       Truncation length for the tokeniser.
-        proj_seed:         Seed for the 768→512 projection initialisation.
-                           Same seed → same projection across processes.
+        proj_seed:         Seed for the 768->512 projection initialisation.
+        async_encode:      Run encode on a background thread (default True).
     """
 
     def __init__(
@@ -121,39 +180,50 @@ class GraniteEmbedder(nn.Module):
         device: Optional[Union[str, torch.device]] = None,
         max_seq_len: int = 512,
         proj_seed: int = 0xC0FFEE,
+        async_encode: bool = True,
     ) -> None:
         super().__init__()
 
-        # Lazy heavy-import: only pull `transformers` when the embedder is
-        # actually instantiated. Keeps cold-import time down for users who
-        # only need the rest of the brain.
         from transformers import AutoModel, AutoTokenizer
 
         self.device_ = torch.device(device) if device is not None else _pick_device()
         self.max_seq_len = max_seq_len
+        self.async_encode = async_encode
 
         resolved = self._resolve_model_path(model_id_or_path)
 
-        # Tokeniser & encoder. local_files_only auto-detected: if the path is
-        # a directory we trust it; otherwise allow the hub fallback.
         self.tokenizer = AutoTokenizer.from_pretrained(resolved)
         self.encoder = AutoModel.from_pretrained(resolved).to(self.device_).eval()
         for p in self.encoder.parameters():
             p.requires_grad_(False)
 
-        # Deterministic projection: 768 → 512.
+        # Deterministic projection: 768 -> 512.
         gen = torch.Generator().manual_seed(proj_seed)
-        self.projection = nn.Linear(_GRANITE_HIDDEN_DIM, _Chip_LATENT_DIM)
+        self.projection = nn.Linear(_GRANITE_HIDDEN_DIM, _CHIP_LATENT_DIM)
         with torch.no_grad():
             nn.init.kaiming_uniform_(self.projection.weight, a=5 ** 0.5, generator=gen)
             nn.init.zeros_(self.projection.bias)
         self.projection = self.projection.to(self.device_)
 
-        # Per-tick embedding cache: if the same text is encoded twice in one
-        # tick (thalamus + hippocampus recall), the second call is free.
+        # Per-call cache: same single string -> return immediately.
         self._cache_text: Optional[str] = None
         self._cache_vec: Optional[torch.Tensor] = None
-        self.output_dim = _Chip_LATENT_DIM
+
+        # Async encode state.
+        # _executor: single-worker thread pool (one granite at a time).
+        # _pending_future: the in-flight encode job.
+        # _pending_text: the text submitted to that job.
+        # _last_result: the most recently completed result.
+        self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        self._pending_future: Optional[concurrent.futures.Future] = None
+        self._pending_text: Optional[str] = None
+        self._last_result: Optional[torch.Tensor] = None
+        if async_encode:
+            self._executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="granite_encode"
+            )
+
+        self.output_dim = _CHIP_LATENT_DIM
         self.model_id_or_path = resolved
 
     # ------------------------------------------------------------------
@@ -162,23 +232,13 @@ class GraniteEmbedder(nn.Module):
 
     @staticmethod
     def _resolve_model_path(override: Optional[str]) -> str:
-        """
-        Decide where to load the model from.
-
-        Order:
-            1. Caller's explicit override (path or hub id).
-            2. A local HF-format snapshot in the project tree.
-            3. The hub id as a last resort (network required).
-        """
         if override:
             return override
-
         here = Path(__file__).resolve().parent
         for candidate in _LOCAL_DIR_NAMES:
             p = (here / candidate).resolve()
             if p.is_dir() and (p / "config.json").is_file():
                 return str(p)
-
         return _GRANITE_MODEL_ID
 
     # ------------------------------------------------------------------
@@ -190,52 +250,23 @@ class GraniteEmbedder(nn.Module):
         hidden_states: torch.Tensor,
         attention_mask: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Attention-mask-weighted mean pooling over the last hidden state.
-
-            pooled[b] = Σ_t mask[b,t] · h[b,t]  /  max(Σ_t mask[b,t], 1)
-
-        This is the standard recipe for sentence-transformers-style models
-        and avoids letting [PAD] tokens dilute the sentence vector.
-        """
-        mask = attention_mask.unsqueeze(-1).to(hidden_states.dtype)  # (B, T, 1)
+        mask = attention_mask.unsqueeze(-1).to(hidden_states.dtype)
         summed = (hidden_states * mask).sum(dim=1)
         counts = mask.sum(dim=1).clamp(min=1.0)
         return summed / counts
 
     # ------------------------------------------------------------------
-    # Public: encoding
+    # Internal: synchronous forward pass
     # ------------------------------------------------------------------
 
     @torch.inference_mode()
-    def encode(
+    def _encode_sync(
         self,
         text: Union[str, Sequence[str]],
         batch_size: int = 32,
     ) -> torch.Tensor:
-        """
-        Embed a string or list of strings into Chip's 512-D latent space.
-
-        Single-string calls are cached: if the same string is encoded twice
-        in the same tick (thalamus + hippocampus recall), the second call
-        returns the cached result immediately at zero cost.
-
-        Args:
-            text:       A single string or a list of strings.
-            batch_size: Maximum number of strings per forward pass.
-
-        Returns:
-            torch.Tensor of shape:
-                (D,)        if `text` is a single string
-                (N, D)      if `text` is a list of N strings
-            All vectors are L2-normalised.
-        """
+        """Blocking encode. Called directly or from the background thread."""
         single = isinstance(text, str)
-
-        # Cache hit: same single string as last call — return immediately.
-        if single and text == self._cache_text and self._cache_vec is not None:
-            return self._cache_vec
-
         items: List[str] = [text] if single else list(text)
         if not items:
             return torch.empty(0, self.output_dim, device=self.device_)
@@ -252,41 +283,143 @@ class GraniteEmbedder(nn.Module):
             ).to(self.device_)
 
             outputs = self.encoder(**batch_enc)
-            hidden = outputs.last_hidden_state                       # (B, T, 768)
+            hidden = outputs.last_hidden_state
             pooled = self._mean_pool(hidden, batch_enc["attention_mask"])
-            pooled = F.normalize(pooled, p=2, dim=-1)                # unit 768-D
+            pooled = F.normalize(pooled, p=2, dim=-1)
             pooled = pooled.to(self.projection.weight.dtype)
-            projected = self.projection(pooled)                      # (B, 512)
-            projected = F.normalize(projected, p=2, dim=-1)          # unit 512-D
+            projected = self.projection(pooled)
+            projected = F.normalize(projected, p=2, dim=-1)
             chunks.append(projected)
 
         z = torch.cat(chunks, dim=0)
-        result = z[0] if single else z
+        return z[0] if single else z
 
-        # Update cache for single-string calls.
-        if single:
-            self._cache_text = text
-            self._cache_vec = result
+    # ------------------------------------------------------------------
+    # Public: encoding
+    # ------------------------------------------------------------------
 
-        return result
+    def encode(
+        self,
+        text: Union[str, Sequence[str]],
+        batch_size: int = 32,
+    ) -> torch.Tensor:
+        """
+        Embed text into Chip's 512-D latent space.
+
+        In async mode (default):
+            - Submits `text` to the background thread.
+            - Returns the result from the *previous* call (1-tick lag).
+            - First call blocks until the result is ready.
+            - If the same string is submitted twice in a row, returns
+              the cached result immediately without re-encoding.
+
+        In sync mode:
+            - Blocks until the result is ready (original behaviour).
+            - Used for inner_speech and tests.
+
+        Returns:
+            (D,) tensor for a single string, (N, D) for a list.
+        """
+        single = isinstance(text, str)
+
+        # Cache hit: same single string as last completed encode.
+        if single and text == self._cache_text and self._cache_vec is not None:
+            if self.async_encode:
+                # Still submit to keep the pipeline warm for the next tick.
+                self._submit_async(text, batch_size)
+            return self._cache_vec
+
+        if not self.async_encode:
+            result = self._encode_sync(text, batch_size)
+            if single:
+                self._cache_text = text
+                self._cache_vec = result
+            return result
+
+        # --- Async path ---
+        # 1. Collect the result from the previous submission (blocks if not done).
+        prev_result = self._collect_pending()
+
+        # 2. Submit the new text to the background thread.
+        self._submit_async(text, batch_size)
+
+        # 3. Return the previous result.
+        #    On the very first call prev_result is None, so we block on the
+        #    just-submitted future to get a real result.
+        if prev_result is None:
+            prev_result = self._collect_pending()
+
+        if single and prev_result is not None:
+            self._cache_text = self._pending_text  # text that produced prev_result
+            self._cache_vec = prev_result
+
+        return prev_result  # type: ignore[return-value]
+
+    def encode_now(
+        self,
+        text: Union[str, Sequence[str]],
+        batch_size: int = 32,
+    ) -> torch.Tensor:
+        """
+        Always-synchronous encode. Bypasses the async pipeline.
+
+        Use this when you need the embedding for the *current* text
+        immediately (e.g. inner_speech, consistency checks on new beliefs).
+        """
+        return self._encode_sync(text, batch_size)
+
+    # ------------------------------------------------------------------
+    # Async helpers
+    # ------------------------------------------------------------------
+
+    def _submit_async(self, text: Union[str, Sequence[str]], batch_size: int) -> None:
+        """Submit an encode job to the background thread."""
+        if self._executor is None:
+            return
+        self._pending_text = text if isinstance(text, str) else None
+        self._pending_future = self._executor.submit(
+            self._encode_sync, text, batch_size
+        )
+
+    def _collect_pending(self) -> Optional[torch.Tensor]:
+        """Wait for the pending future and return its result."""
+        if self._pending_future is None:
+            return self._last_result
+        try:
+            result = self._pending_future.result(timeout=30.0)
+            self._last_result = result
+            self._pending_future = None
+            return result
+        except Exception as e:
+            print(f"[GraniteEmbedder] async encode failed: {e}")
+            self._pending_future = None
+            return self._last_result
+
+    def warmup(self, text: str = "warmup") -> None:
+        """
+        Pre-submit a warmup encode so the first real tick doesn't block.
+        Call this once after boot, before the first tick().
+        """
+        if self.async_encode and self._executor is not None:
+            self._submit_async(text, 32)
+
+    def shutdown(self) -> None:
+        """Shut down the background thread pool cleanly."""
+        if self._executor is not None:
+            self._executor.shutdown(wait=True)
+            self._executor = None
 
     # ------------------------------------------------------------------
     # Public: similarity helpers
     # ------------------------------------------------------------------
 
-    def similarity(self, text1: Union[str, Sequence[str]], text2: Union[str, Sequence[str]]) -> torch.Tensor:
-        """
-        Cosine similarity between two texts (or aligned batches).
-
-        Both inputs are L2-normalised inside `encode`, so cosine sim
-        reduces to a plain dot product.
-
-        Returns:
-            scalar tensor when both inputs are strings, otherwise a 1-D
-            tensor of pairwise similarities (one per row).
-        """
-        a = self.encode(text1)
-        b = self.encode(text2)
+    def similarity(
+        self,
+        text1: Union[str, Sequence[str]],
+        text2: Union[str, Sequence[str]],
+    ) -> torch.Tensor:
+        a = self.encode_now(text1)
+        b = self.encode_now(text2)
         if a.dim() == 1 and b.dim() == 1:
             return torch.dot(a, b)
         if a.dim() == 1:
@@ -301,25 +434,17 @@ class GraniteEmbedder(nn.Module):
         candidates: Sequence[str],
         top_k: int = 5,
     ) -> List[tuple]:
-        """
-        Return the top-k most similar candidates to `query` by cosine sim.
-
-        Returns:
-            A list of (candidate_text, similarity_score) tuples, sorted
-            by score descending.
-        """
         if not candidates:
             return []
-        q = self.encode(query)
-        c = self.encode(list(candidates))
+        q = self.encode_now(query)
+        c = self.encode_now(list(candidates))
         sims = (c @ q).cpu()
         k = min(top_k, len(candidates))
         scores, idx = sims.topk(k)
         return [(candidates[i], float(scores[j].item())) for j, i in enumerate(idx.tolist())]
 
     # ------------------------------------------------------------------
-    # nn.Module surface — lets the embedder slot into any pipeline that
-    # expects a ModuleDict["text"](batch_of_strings) style call.
+    # nn.Module surface
     # ------------------------------------------------------------------
 
     def forward(self, text: Union[str, Sequence[str]]) -> torch.Tensor:
@@ -329,23 +454,23 @@ class GraniteEmbedder(nn.Module):
     # Diagnostics
     # ------------------------------------------------------------------
 
-    def __repr__(self) -> str:
-        return (
-            f"GraniteEmbedder(model={self.model_id_or_path!r}, "
-            f"device={self.device_}, in={self.input_dim}, out={self.output_dim})"
-        )
-
-    def info(self) -> dict:
-        """A small dict of runtime info for the brainstem health monitor."""
+    def info(self) -> Dict:
         n_params = sum(p.numel() for p in self.encoder.parameters())
         return {
             "model": self.model_id_or_path,
             "device": str(self.device_),
-            "input_dim": self.input_dim,
             "output_dim": self.output_dim,
             "encoder_params": int(n_params),
             "max_seq_len": self.max_seq_len,
+            "async_encode": self.async_encode,
         }
+
+    def __repr__(self) -> str:
+        mode = "async" if self.async_encode else "sync"
+        return (
+            f"GraniteEmbedder(model={self.model_id_or_path!r}, "
+            f"device={self.device_}, out={self.output_dim}, mode={mode})"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -357,13 +482,13 @@ def get_embedder(
     device: Optional[Union[str, torch.device]] = None,
     max_seq_len: int = 512,
     proj_seed: int = 0xC0FFEE,
+    async_encode: bool = True,
 ) -> GraniteEmbedder:
     """
     Return the process-wide GraniteEmbedder, creating it on first call.
 
-    Subsequent calls ignore the constructor arguments — the first caller
-    determines the configuration. Use `reset_embedder()` if you need to
-    force a reconfiguration during testing.
+    Subsequent calls ignore constructor arguments. Use reset_embedder()
+    to force reconfiguration (tests only).
     """
     global _singleton
     if _singleton is None:
@@ -374,6 +499,7 @@ def get_embedder(
                     device=device,
                     max_seq_len=max_seq_len,
                     proj_seed=proj_seed,
+                    async_encode=async_encode,
                 )
     return _singleton
 
@@ -382,6 +508,8 @@ def reset_embedder() -> None:
     """Drop the cached singleton (used by tests)."""
     global _singleton
     with _singleton_lock:
+        if _singleton is not None:
+            _singleton.shutdown()
         _singleton = None
 
 
