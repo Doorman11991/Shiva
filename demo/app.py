@@ -544,31 +544,36 @@ const evtSource = new EventSource('/brain/stream');
 evtSource.onmessage = (e) => { try { update(JSON.parse(e.data)); } catch(err){} };
 
 // ============================================================
-// DEMO SLIDESHOW — auto-narrated tour of the brain architecture
+// DEMO SLIDESHOW — auto-narrated tour, audio-driven timing
+// Each scene plays its narration to completion before advancing.
+// Audio is pre-generated on demo start so playback is gapless.
 // ============================================================
 
 const SCENES = [
-    { t: 0, dur: 8, narr: "This is Chip's cognitive architecture — a brain made of code.", regions: [], label: "Chip's Cognitive Architecture" },
-    { t: 8, dur: 3, narr: "The Cerebrum handles planning and goals.", regions: ["cerebrum"], label: "Cerebrum: Planning & Goals" },
-    { t: 11, dur: 3, narr: "The Amygdala processes emotion and valence.", regions: ["amygdala"], label: "Amygdala: Emotion & Valence" },
-    { t: 14, dur: 3, narr: "The Hippocampus forms and recalls memories.", regions: ["hippocampus"], label: "Hippocampus: Memory" },
-    { t: 17, dur: 3, narr: "The Hypothalamus drives motivation through homeostatic needs.", regions: ["hypothalamus"], label: "Hypothalamus: Drives" },
-    { t: 20, dur: 3, narr: "The Thalamus integrates sensory input and attention.", regions: ["thalamus"], label: "Thalamus: Sensory Hub" },
-    { t: 23, dur: 4, narr: "Watch a thought form in real time.", regions: ["thalamus"], label: "Observation enters the Thalamus", thought: "Something new is happening..." },
-    { t: 27, dur: 4, narr: "The Amygdala reacts emotionally.", regions: ["thalamus", "amygdala"], label: "Emotional response", thought: "This feels significant." },
-    { t: 31, dur: 4, narr: "The Hippocampus searches for similar memories.", regions: ["amygdala", "hippocampus"], label: "Memory recall", thought: "Have I felt this before?" },
-    { t: 35, dur: 4, narr: "The Cerebrum forms a plan.", regions: ["hippocampus", "cerebrum"], label: "Goal formation", thought: "I should investigate further." },
-    { t: 39, dur: 4, narr: "The Hypothalamus reinforces motivation.", regions: ["cerebrum", "hypothalamus"], label: "Motivational drive", thought: "Curiosity is rising." },
-    { t: 43, dur: 5, narr: "When new evidence contradicts a belief, it rotates smoothly through SLERP — spherical linear interpolation.", regions: ["cerebrum", "hippocampus"], label: "SLERP Belief Revision" },
-    { t: 48, dur: 5, narr: "All thought happens in a 512-dimensional latent space — a constellation of meaning.", regions: ["thalamus", "cerebrum"], label: "Latent Space (512-D)" },
-    { t: 53, dur: 5, narr: "Emotion modulates everything. Frustration fades as curiosity takes over.", regions: ["amygdala", "hypothalamus"], label: "Emotional Homeostasis" },
-    { t: 58, dur: 7, narr: "Persistent memory. Intrinsic motivation. Emotional homeostasis. This is how Chip thinks.", regions: ["cerebrum","amygdala","hippocampus","hypothalamus","thalamus","cerebellum","brainstem"], label: "This is how Chip thinks" },
+    { narr: "This is Chip's cognitive architecture. A brain made of code.", regions: [], label: "Chip's Cognitive Architecture" },
+    { narr: "The Cerebrum handles planning and goals.", regions: ["cerebrum"], label: "Cerebrum: Planning and Goals" },
+    { narr: "The Amygdala processes emotion and valence.", regions: ["amygdala"], label: "Amygdala: Emotion and Valence" },
+    { narr: "The Hippocampus forms and recalls memories.", regions: ["hippocampus"], label: "Hippocampus: Memory" },
+    { narr: "The Hypothalamus drives motivation through homeostatic needs.", regions: ["hypothalamus"], label: "Hypothalamus: Drives" },
+    { narr: "The Thalamus integrates sensory input and attention.", regions: ["thalamus"], label: "Thalamus: Sensory Hub" },
+    { narr: "Watch a thought form in real time.", regions: ["thalamus"], label: "Observation enters the Thalamus", thought: "Something new is happening." },
+    { narr: "The Amygdala reacts emotionally.", regions: ["thalamus", "amygdala"], label: "Emotional response", thought: "This feels significant." },
+    { narr: "The Hippocampus searches for similar memories.", regions: ["amygdala", "hippocampus"], label: "Memory recall", thought: "Have I felt this before?" },
+    { narr: "The Cerebrum forms a plan.", regions: ["hippocampus", "cerebrum"], label: "Goal formation", thought: "I should investigate further." },
+    { narr: "The Hypothalamus reinforces motivation.", regions: ["cerebrum", "hypothalamus"], label: "Motivational drive", thought: "Curiosity is rising." },
+    { narr: "When new evidence contradicts a belief, it rotates smoothly through spherical linear interpolation.", regions: ["cerebrum", "hippocampus"], label: "SLERP Belief Revision" },
+    { narr: "All thought happens in a five hundred and twelve dimensional latent space. A constellation of meaning.", regions: ["thalamus", "cerebrum"], label: "Latent Space (512-D)" },
+    { narr: "Emotion modulates everything. Frustration fades as curiosity takes over.", regions: ["amygdala", "hypothalamus"], label: "Emotional Homeostasis" },
+    { narr: "Persistent memory. Intrinsic motivation. Emotional homeostasis. This is how Chip thinks.", regions: ["cerebrum","amygdala","hippocampus","hypothalamus","thalamus","cerebellum","brainstem"], label: "This is how Chip thinks" },
 ];
 
+const VOICE = "expr-voice-5-m";
+
 let demoActive = false;
-let demoStartTime = 0;
 let demoVoiceEnabled = true;
 let demoCurrentScene = -1;
+let demoAudioCache = [];   // pre-generated Audio objects per scene
+let demoPlaybackToken = 0; // increments on each start/stop to invalidate stale callbacks
 
 function toggleDemo() {
     if (demoActive) { stopDemo(); } else { startDemo(); }
@@ -579,21 +584,46 @@ function toggleVoice() {
     document.getElementById('voice-btn').textContent = demoVoiceEnabled ? '🔊 Voice ON' : '🔇 Voice OFF';
     if (!demoVoiceEnabled && window._currentTtsAudio) {
         window._currentTtsAudio.pause();
-        window._currentTtsAudio = null;
     }
 }
 
-function startDemo() {
+async function startDemo() {
     demoActive = true;
-    demoStartTime = performance.now();
     demoCurrentScene = -1;
+    demoPlaybackToken++;
+    const myToken = demoPlaybackToken;
     document.getElementById('demo-overlay').classList.add('active');
     document.getElementById('demo-btn').textContent = '⏸ Stop Demo';
-    runDemoLoop();
+    document.getElementById('demo-label').textContent = 'Loading narration...';
+
+    // Pre-generate all scene audio in parallel
+    demoAudioCache = SCENES.map(s => {
+        const a = new Audio('/tts?text=' + encodeURIComponent(s.narr) + '&voice=' + VOICE);
+        a.preload = 'auto';
+        return a;
+    });
+
+    // Wait for first audio to be ready before starting
+    try { await waitForAudio(demoAudioCache[0]); } catch (e) {}
+    if (myToken !== demoPlaybackToken) return;  // user stopped while loading
+
+    document.getElementById('demo-label').textContent = '';
+    playScene(0, myToken);
+}
+
+function waitForAudio(audio) {
+    return new Promise((resolve, reject) => {
+        if (audio.readyState >= 3) return resolve();
+        audio.addEventListener('canplaythrough', resolve, { once: true });
+        audio.addEventListener('error', reject, { once: true });
+        // Trigger loading if it hasn't started
+        audio.load();
+    });
 }
 
 function stopDemo() {
     demoActive = false;
+    demoPlaybackToken++;  // invalidate any pending callbacks
     document.getElementById('demo-overlay').classList.remove('active');
     document.getElementById('demo-btn').textContent = '▶ Play Demo';
     document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
@@ -603,57 +633,55 @@ function stopDemo() {
         window._currentTtsAudio.pause();
         window._currentTtsAudio = null;
     }
+    demoAudioCache.forEach(a => { try { a.pause(); } catch(e){} });
+    demoAudioCache = [];
 }
 
-function speak(text) {
-    if (!demoVoiceEnabled) return;
-    // Stop any currently-playing audio
-    if (window._currentTtsAudio) {
-        window._currentTtsAudio.pause();
-        window._currentTtsAudio = null;
-    }
-    const audio = new Audio('/tts?text=' + encodeURIComponent(text));
-    audio.volume = 1.0;
-    audio.play().catch(err => console.warn('TTS playback failed:', err));
-    window._currentTtsAudio = audio;
-}
+function playScene(idx, token) {
+    if (!demoActive || token !== demoPlaybackToken) return;
+    if (idx >= SCENES.length) { stopDemo(); return; }
 
-function runDemoLoop() {
-    if (!demoActive) return;
-    const elapsed = (performance.now() - demoStartTime) / 1000;
-    const totalDuration = SCENES[SCENES.length-1].t + SCENES[SCENES.length-1].dur;
+    const scene = SCENES[idx];
+    demoCurrentScene = idx;
 
-    if (elapsed > totalDuration) { stopDemo(); return; }
+    // Visual updates
+    document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
+    scene.regions.forEach(rid => {
+        const el = document.getElementById('reg-' + rid);
+        if (el) el.classList.add('demo-active');
+    });
+    document.getElementById('demo-label').textContent = scene.label || '';
+    document.getElementById('demo-thought').textContent = scene.thought || '';
 
-    // Find current scene
-    let scene = SCENES[0];
-    let sceneIdx = 0;
-    for (let i = 0; i < SCENES.length; i++) {
-        if (elapsed >= SCENES[i].t) { scene = SCENES[i]; sceneIdx = i; }
-    }
-
-    // If scene changed, trigger transitions
-    if (sceneIdx !== demoCurrentScene) {
-        demoCurrentScene = sceneIdx;
-        // Update active regions
-        document.querySelectorAll('.brain-region').forEach(r => r.classList.remove('demo-active'));
-        scene.regions.forEach(rid => {
-            const el = document.getElementById('reg-' + rid);
-            if (el) el.classList.add('demo-active');
-        });
-        // Update label & thought
-        document.getElementById('demo-label').textContent = scene.label || '';
-        document.getElementById('demo-thought').textContent = scene.thought || '';
-        // Narrate
-        if (scene.narr) speak(scene.narr);
-    }
-
-    // Update progress bar
-    const progress = (elapsed / totalDuration) * 100;
+    // Progress bar
+    const progress = ((idx + 1) / SCENES.length) * 100;
     document.getElementById('demo-progress').style.width = progress + '%';
-    document.getElementById('demo-time').textContent = elapsed.toFixed(1) + 's / ' + totalDuration + 's';
+    document.getElementById('demo-time').textContent = `Scene ${idx+1} / ${SCENES.length}`;
 
-    requestAnimationFrame(runDemoLoop);
+    // Audio playback with auto-advance on completion
+    if (demoVoiceEnabled && demoAudioCache[idx]) {
+        const audio = demoAudioCache[idx];
+        window._currentTtsAudio = audio;
+        audio.currentTime = 0;
+        audio.onended = () => {
+            if (token !== demoPlaybackToken) return;
+            // Small pause between scenes for breathing room
+            setTimeout(() => playScene(idx + 1, token), 400);
+        };
+        audio.onerror = () => {
+            // Fall back to fixed timing if audio fails
+            if (token !== demoPlaybackToken) return;
+            setTimeout(() => playScene(idx + 1, token), 3000);
+        };
+        audio.play().catch(err => {
+            console.warn('TTS playback failed:', err);
+            // Continue anyway
+            setTimeout(() => playScene(idx + 1, token), 3000);
+        });
+    } else {
+        // Voice off: use fixed timing per scene
+        setTimeout(() => playScene(idx + 1, token), 3500);
+    }
 }
 </script>
 </div></div></body></html>"""
@@ -956,7 +984,7 @@ def get_tts():
 def tts():
     """Generate audio for a text string using KittenTTS. Cached per-text."""
     text = request.args.get("text", "").strip()
-    voice = request.args.get("voice", "expr-voice-2-f")
+    voice = request.args.get("voice", "expr-voice-5-m")
     if not text:
         return Response(b"", status=400)
 
