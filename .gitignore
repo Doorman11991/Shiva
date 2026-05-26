@@ -9,3 +9,11 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+.omnimemory/
+.memory/
+.code-graph/
