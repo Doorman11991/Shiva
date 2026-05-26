@@ -463,7 +463,9 @@ class ChipBrain:
             obs_token = observation  # already a (B, T, D) tensor
 
         obs_token = obs_token.to(self.device)
-        z_encoded = self.backbone.forward_pass(obs_token)           # (B, T, D)
+        self.energy.spend("forward_pass")
+        with torch.no_grad():
+            z_encoded = self.backbone.forward_pass(obs_token)       # (B, T, D)
 
         # Top-down attention query from previous tick's cerebrum state.
         # On tick 1 this is None and the bottleneck operates purely
@@ -477,7 +479,8 @@ class ChipBrain:
                 td_query, priority=0.7,
             ))
 
-        z_filtered, salience = self.bottleneck(z_encoded, top_down_query=td_query)
+        with torch.no_grad():
+            z_filtered, salience = self.bottleneck(z_encoded, top_down_query=td_query)
         z_pooled = z_filtered.mean(dim=1)                           # (B, D)
 
         self.bus.publish(NeuralSignal(
@@ -677,15 +680,16 @@ class ChipBrain:
 
         # Meta-cognition: should we deliberate?
         task_tensor = torch.tensor([task_id], dtype=torch.long).to(self.device) if task_id is not None else None
-        raw_action, log_prob, gate = self.policy.get_action(
-            z_filtered if z_filtered.shape[1] > 0 else obs_token,
-            task_id=task_tensor,
-        )
-        q1, q2 = self.policy.evaluate_q(
-            z_filtered if z_filtered.shape[1] > 0 else obs_token,
-            raw_action,
-            task_id=task_tensor,
-        )
+        with torch.no_grad():
+            raw_action, log_prob, gate = self.policy.get_action(
+                z_filtered if z_filtered.shape[1] > 0 else obs_token,
+                task_id=task_tensor,
+            )
+            q1, q2 = self.policy.evaluate_q(
+                z_filtered if z_filtered.shape[1] > 0 else obs_token,
+                raw_action,
+                task_id=task_tensor,
+            )
         confidence, deliberating = self.meta.assess(
             z_conditioned, log_prob, q1, q2,
             wm_error=float(curiosity_reward.mean().item()),
@@ -860,7 +864,8 @@ class ChipBrain:
         consolidation_interval = max(50, self.cfg["consolidation_every"] // 3) if is_sleeping else self.cfg["consolidation_every"]
 
         # Active dreaming (replaces the no-op DreamCycle)
-        if self._tick % dream_interval == 0:
+        if self._tick % dream_interval == 0 and self.energy.can_afford("dream_cycle"):
+            self.energy.spend("dream_cycle")
             dream_result = self.active_dreamer.run(self.memory, batch_size=4)
             if dream_result.get("n_stored", 0) > 0:
                 self.bus.publish(NeuralSignal(
@@ -870,7 +875,8 @@ class ChipBrain:
 
         # World model update (skip during sleep to save compute)
         if not is_sleeping and self._tick % self.cfg["world_model_update_every"] == 0:
-            if self._last_z is not None and self._last_action is not None:
+            if self._last_z is not None and self._last_action is not None and self.energy.can_afford("world_model_rollout"):
+                self.energy.spend("world_model_rollout")
                 self.wm_trainer.update(
                     self._last_z.detach(),
                     self._last_action.detach(),
@@ -878,7 +884,8 @@ class ChipBrain:
                 )
 
         # Memory consolidation (MemoryConsolidator now passes action=None correctly)
-        if self._tick % consolidation_interval == 0:
+        if self._tick % consolidation_interval == 0 and self.energy.can_afford("memory_consolidation"):
+            self.energy.spend("memory_consolidation")
             dream_batch = self.memory.get_dream_batch(16)
             if dream_batch is not None:
                 consolidator = MemoryConsolidator(self.world_model)

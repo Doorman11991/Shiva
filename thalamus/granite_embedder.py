@@ -1,4 +1,4 @@
-﻿"""
+"""
 thalamus/granite_embedder.py — Local sensory text encoder (granite-125m-english).
 
 Biological role
@@ -149,8 +149,10 @@ class GraniteEmbedder(nn.Module):
             nn.init.zeros_(self.projection.bias)
         self.projection = self.projection.to(self.device_)
 
-        # Public metadata so the rest of the brain can introspect us.
-        self.input_dim = _GRANITE_HIDDEN_DIM
+        # Per-tick embedding cache: if the same text is encoded twice in one
+        # tick (thalamus + hippocampus recall), the second call is free.
+        self._cache_text: Optional[str] = None
+        self._cache_vec: Optional[torch.Tensor] = None
         self.output_dim = _Chip_LATENT_DIM
         self.model_id_or_path = resolved
 
@@ -214,6 +216,10 @@ class GraniteEmbedder(nn.Module):
         """
         Embed a string or list of strings into Chip's 512-D latent space.
 
+        Single-string calls are cached: if the same string is encoded twice
+        in the same tick (thalamus + hippocampus recall), the second call
+        returns the cached result immediately at zero cost.
+
         Args:
             text:       A single string or a list of strings.
             batch_size: Maximum number of strings per forward pass.
@@ -225,6 +231,11 @@ class GraniteEmbedder(nn.Module):
             All vectors are L2-normalised.
         """
         single = isinstance(text, str)
+
+        # Cache hit: same single string as last call — return immediately.
+        if single and text == self._cache_text and self._cache_vec is not None:
+            return self._cache_vec
+
         items: List[str] = [text] if single else list(text)
         if not items:
             return torch.empty(0, self.output_dim, device=self.device_)
@@ -244,15 +255,20 @@ class GraniteEmbedder(nn.Module):
             hidden = outputs.last_hidden_state                       # (B, T, 768)
             pooled = self._mean_pool(hidden, batch_enc["attention_mask"])
             pooled = F.normalize(pooled, p=2, dim=-1)                # unit 768-D
-            # Cast to the projection's dtype — granite may load as bfloat16
-            # while the projection is float32 (or vice versa on accelerators).
             pooled = pooled.to(self.projection.weight.dtype)
             projected = self.projection(pooled)                      # (B, 512)
             projected = F.normalize(projected, p=2, dim=-1)          # unit 512-D
             chunks.append(projected)
 
         z = torch.cat(chunks, dim=0)
-        return z[0] if single else z
+        result = z[0] if single else z
+
+        # Update cache for single-string calls.
+        if single:
+            self._cache_text = text
+            self._cache_vec = result
+
+        return result
 
     # ------------------------------------------------------------------
     # Public: similarity helpers
