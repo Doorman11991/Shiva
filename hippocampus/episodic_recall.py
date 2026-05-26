@@ -70,12 +70,14 @@ class EpisodicRecall:
     # ------------------------------------------------------------------
 
     def _episode_signature(self, episode: dict) -> torch.Tensor:
-        """One vector per episode for similarity matching."""
+        """One vector per episode for similarity matching. Always returns CPU tensor."""
         states = episode["states"]  # (T, D)
         if self.mode == "endpoint":
-            return states[-1]
+            sig = states[-1]
         else:  # trajectory
-            return states.mean(dim=0)
+            sig = states.mean(dim=0)
+        # Ensure CPU regardless of where the snapshot was saved from
+        return sig.to('cpu') if sig.device.type != 'cpu' else sig
 
     # ------------------------------------------------------------------
     # Public API
@@ -99,19 +101,24 @@ class EpisodicRecall:
         if not self.memory._bank:
             return []
 
-        q = query.detach().cpu()
+        # All recall computation runs on CPU via numpy to avoid DirectML
+        # intercepting torch ops even on CPU tensors.
+        if query.device.type != 'cpu':
+            q = query.detach().to(torch.device('cpu'))
+        else:
+            q = query.detach()
         if q.dim() > 1:
             q = q.squeeze(0)
-        q = F.normalize(q, p=2, dim=0)
+        q_np = F.normalize(q.float(), p=2, dim=0).numpy()
 
         # Stack signatures for vectorised cosine similarity
-        sigs = torch.stack([
+        sigs_list = [
             self._episode_signature(ep) for ep in self.memory._bank
-        ])  # (N, D)
-        sigs = F.normalize(sigs, p=2, dim=-1)
+        ]
+        import numpy as np
+        sigs_np = np.stack([F.normalize(s.float(), p=2, dim=0).numpy() for s in sigs_list])
 
-        sims = sigs @ q  # (N,)
-        sims = sims.tolist()
+        sims = (sigs_np @ q_np).tolist()
 
         # Pair with episodes, filter, sort
         scored = [

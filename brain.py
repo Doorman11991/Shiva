@@ -522,7 +522,7 @@ class ChipBrain:
         # 3. HIPPOCAMPUS — identity context + temporal abstraction
         # ----------------------------------------------------------------
         identity = self.memory.get_identity_context(z_pooled)       # (B, D)
-        self.temporal.push(z_pooled.squeeze(0).detach().cpu())
+        self.temporal.push(z_pooled.squeeze(0).detach().to('cpu'))
         cell_idx, novelty = self.cog_map.update(z_pooled.squeeze(0).detach())
 
         self.bus.publish(NeuralSignal(
@@ -603,7 +603,7 @@ class ChipBrain:
         # Emotional memory tagging: compute significance for this observation
         # so the hippocampus can weight replay sampling appropriately.
         emo_significance = self.emo_tagger.compute_significance(
-            valence=valence.detach().cpu(),
+            valence=valence.detach().to('cpu'),
             arousal=torch.tensor([[arousal_val]]),
             surprise=torch.tensor([[pred_err_scalar]]),
         )
@@ -1045,7 +1045,7 @@ class ChipBrain:
                 empowerment_score=max(0.0, reward),
             )
             self.narrative.update_narrative(
-                self._last_z.squeeze(0).detach().cpu(),
+                self._last_z.squeeze(0).detach().to('cpu'),
                 outcome_valence=float(valence.mean().item()),
             )
             self.smoother.reset()

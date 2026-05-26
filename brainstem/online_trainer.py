@@ -1,4 +1,4 @@
-﻿"""
+"""
 brainstem/online_trainer.py — The training heartbeat.
 
 The brainstem keeps the body alive through involuntary, continuous
@@ -307,7 +307,7 @@ class ChipTrainer:
             except RuntimeError:
                 pass
 
-        new_priorities = ((torch.abs(td1) + torch.abs(td2)) / 2).detach().cpu()
+        new_priorities = ((torch.abs(td1) + torch.abs(td2)) / 2).detach().to('cpu')
         self.buffer.update_priorities(idxs, new_priorities)
         self._soft_update()
         self.training_step += 1

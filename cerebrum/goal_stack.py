@@ -1,4 +1,4 @@
-﻿"""
+"""
 cerebrum/goal_stack.py — Hierarchical goal stack.
 
 Biological role
@@ -215,8 +215,8 @@ class GoalStack:
         """Check if a frame's goal is achieved via cosine proximity."""
         if frame.target_latent is None or z_current is None:
             return False
-        z = z_current.detach().cpu() if z_current.is_cuda else z_current.detach()
-        t = frame.target_latent.cpu() if frame.target_latent.is_cuda else frame.target_latent
+        z = z_current.detach().to('cpu') if z_current.device.type != 'cpu' else z_current.detach()
+        t = frame.target_latent.to('cpu') if frame.target_latent.device.type != 'cpu' else frame.target_latent
         if z.dim() > 1:
             z = z.squeeze(0)
         sim = float(F.cosine_similarity(z.unsqueeze(0), t.unsqueeze(0)).item())

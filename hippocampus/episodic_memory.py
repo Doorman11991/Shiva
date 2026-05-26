@@ -91,7 +91,7 @@ class EpisodicMemory(IEpisodicMemory):
         empowerment_score: float,
     ) -> None:
         significance = torch.abs(valence_sequence.mean()) + empowerment_score
-        states = state_sequence.detach().cpu()
+        states = state_sequence.detach().to('cpu')
         if states.dim() == 1:
             states = states.unsqueeze(0)
         target_T = int(self.sequence_length)
@@ -222,7 +222,7 @@ class EpisodicMemory(IEpisodicMemory):
 
         # nn.GRU is not supported on DirectML — run on CPU, move result back.
         with torch.no_grad():
-            _, h_n = self.narrative_encoder.cpu()(seq.cpu())
+            _, h_n = self.narrative_encoder.cpu()(seq.to('cpu'))
         identity = h_n[-1].to(device)
         return identity + self_token
 

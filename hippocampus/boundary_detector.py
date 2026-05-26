@@ -99,7 +99,7 @@ class BoundaryDetector:
 
         # Buffer the latent and valence for eventual episode storage
         if z_current is not None:
-            self._episode_buffer.append(z_current.detach().cpu())
+            self._episode_buffer.append(z_current.detach().to('cpu'))
         self._episode_valences.append(valence)
 
         # Not enough data yet

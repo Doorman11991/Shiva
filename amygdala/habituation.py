@@ -76,7 +76,7 @@ class HabituationFilter:
             Novelty factor in [floor, 1.0].
             1.0 = completely novel. floor = completely habituated.
         """
-        z_flat = z.detach().cpu().flatten()
+        z_flat = z.detach().to('cpu').flatten()
         if z_flat.dim() == 0:
             return 1.0
 

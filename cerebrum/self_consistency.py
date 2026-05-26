@@ -124,7 +124,7 @@ class ConsistencyChecker:
         if not beliefs:
             return None
 
-        ev = evidence.detach().cpu()
+        ev = evidence.detach().to('cpu')
         if ev.dim() > 1:
             ev = ev.squeeze(0)
         ev_norm = F.normalize(ev, dim=0)

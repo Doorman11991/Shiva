@@ -38,7 +38,7 @@ class RunningMeanStd:
 
     def update(self, x: Tensorish) -> None:
         if isinstance(x, torch.Tensor):
-            arr = x.detach().reshape(-1).float().cpu()
+            arr = x.detach().reshape(-1).float().to('cpu')
         elif hasattr(x, "__iter__"):
             arr = torch.tensor(list(x), dtype=torch.float32)
         else:

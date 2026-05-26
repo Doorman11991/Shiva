@@ -21,7 +21,7 @@ class BeliefVector:
 
     def __init__(self, name: str, embedding: torch.Tensor, confidence: float = 0.5) -> None:
         self.name = name
-        self.embedding = embedding.detach().cpu()
+        self.embedding = embedding.detach().to('cpu')
         self.confidence = confidence
         self.update_count = 0
 
@@ -37,7 +37,7 @@ class BeliefVector:
         import torch.nn.functional as F
 
         a = F.normalize(self.embedding.float(), dim=0)
-        b = F.normalize(new_evidence.detach().cpu().float(), dim=0)
+        b = F.normalize(new_evidence.detach().to('cpu').float(), dim=0)
 
         # Cosine of angle between a and b
         dot = torch.clamp(torch.dot(a, b), -1.0, 1.0)
@@ -122,7 +122,7 @@ class NarrativeSelf(nn.Module):
         Returns:
             Narrative surprise (how much this episode changed the self-model).
         """
-        z = episode_latent.detach().cpu()
+        z = episode_latent.detach().to('cpu')
         self._narrative_buffer.append(z)
         if len(self._narrative_buffer) > self.narrative_len:
             self._narrative_buffer.pop(0)
@@ -160,7 +160,7 @@ class NarrativeSelf(nn.Module):
 
         # Encode recent narrative.
         # nn.GRU is not supported on DirectML — run on CPU, move result back.
-        narrative_cpu = torch.stack(self._narrative_buffer).cpu().unsqueeze(0)  # (1, T, D)
+        narrative_cpu = torch.stack(self._narrative_buffer).to('cpu').unsqueeze(0)  # (1, T, D)
         gru_cpu = self.narrative_gru.cpu()
         with torch.no_grad():
             _, h_n = gru_cpu(narrative_cpu)
@@ -269,7 +269,7 @@ class NarrativeSelf(nn.Module):
         This is the bridge between continuous latent drives and the
         symbolic language the granite embedder understands.
         """
-        h = homeostasis_vector.detach().cpu().tolist()
+        h = homeostasis_vector.detach().to('cpu').tolist()
 
         # Map drive dimensions to descriptive phrases.
         # Handles both 4-dim (legacy) and 6-dim (HomeostaticRegulator) vectors.

@@ -56,7 +56,7 @@ class AffectiveForecaster(nn.Module):
         """
         # nn.GRU is not supported on DirectML — run on CPU, move result back.
         dev = trajectory.device
-        h, _ = self.gru.cpu()(trajectory.cpu())
+        h, _ = self.gru.cpu()(trajectory.to('cpu'))
         h = h.to(dev)
         return self.head(h)               # (B, T, 1)
 

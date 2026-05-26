@@ -27,7 +27,7 @@ class TemporalLevel:
 
     def push(self, z: torch.Tensor) -> bool:
         """Push a latent vector. Returns True if a new summary was computed."""
-        self._buffer.append(z.detach().cpu())
+        self._buffer.append(z.detach().to('cpu'))
         if len(self._buffer) == self.window:
             self._summary = torch.stack(list(self._buffer)).mean(dim=0)
             return True

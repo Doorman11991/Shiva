@@ -27,8 +27,8 @@ class Skill:
         use_count: int = 0,
     ) -> None:
         self.name = name
-        self.action_sequence = action_sequence.detach().cpu()  # (T, action_dim)
-        self.trigger_latent = trigger_latent.detach().cpu()    # (D,)
+        self.action_sequence = action_sequence.detach().to('cpu')
+        self.trigger_latent = trigger_latent.detach().to('cpu')
         self.success_rate = success_rate
         self.use_count = use_count
 
@@ -102,7 +102,7 @@ class SkillLibrary(nn.Module):
         if not self._skills:
             return None
 
-        z = F.normalize(z_current.detach().cpu().flatten(), dim=0)
+        z = F.normalize(z_current.detach().to('cpu').flatten(), dim=0)
         best_name, best_sim = None, -1.0
 
         for name, skill in self._skills.items():
