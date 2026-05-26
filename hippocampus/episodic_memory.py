@@ -220,8 +220,10 @@ class EpisodicMemory(IEpisodicMemory):
         current_token = current_latent.unsqueeze(1)
         seq = torch.cat([endpoints_seq, current_token], dim=1)
 
-        _, h_n = self.narrative_encoder(seq)
-        identity = h_n[-1]
+        # nn.GRU is not supported on DirectML — run on CPU, move result back.
+        with torch.no_grad():
+            _, h_n = self.narrative_encoder.cpu()(seq.cpu())
+        identity = h_n[-1].to(device)
         return identity + self_token
 
 

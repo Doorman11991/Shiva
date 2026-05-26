@@ -54,7 +54,10 @@ class AffectiveForecaster(nn.Module):
         Returns:
             (B, T, 1) predicted valence at each timestep.
         """
-        h, _ = self.gru(trajectory)       # (B, T, hidden)
+        # nn.GRU is not supported on DirectML — run on CPU, move result back.
+        dev = trajectory.device
+        h, _ = self.gru.cpu()(trajectory.cpu())
+        h = h.to(dev)
         return self.head(h)               # (B, T, 1)
 
     def forecast_mean(self, trajectory: torch.Tensor) -> torch.Tensor:

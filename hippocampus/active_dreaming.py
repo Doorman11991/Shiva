@@ -138,14 +138,10 @@ class ActiveDreamer:
     ) -> List[CounterfactualTrajectory]:
         """
         Generate counterfactual trajectories for one episode.
-
-        Args:
-            episode_states: (T, D) state sequence of the real episode.
-
-        Returns:
-            List of CounterfactualTrajectory objects, one per decision
-            point × alternative (filtered to only those with positive regret).
         """
+        # Move episode to the world model's device (episodes are stored as CPU tensors).
+        wm_device = next(self.world_model.parameters()).device
+        episode_states = episode_states.to(wm_device)
         T, D = episode_states.shape
         decision_points = self._find_decision_points(episode_states)
 

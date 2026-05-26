@@ -341,23 +341,31 @@ class GraniteEmbedder(nn.Module):
             return result
 
         # --- Async path ---
-        # 1. Collect the result from the previous submission (blocks if not done).
-        prev_result = self._collect_pending()
+        # 1. Collect the result from the previous submission.
+        #    If we have a last_result already (not the first call), don't block —
+        #    just check if the future is done and grab it if so.
+        if self._last_result is not None and self._pending_future is not None:
+            if self._pending_future.done():
+                self._collect_pending()
+            # else: background still running, we'll use last_result below
+        else:
+            # First call or no pending — block until we have something.
+            prev_result = self._collect_pending()
 
         # 2. Submit the new text to the background thread.
         self._submit_async(text, batch_size)
 
         # 3. Return the previous result.
-        #    On the very first call prev_result is None, so we block on the
+        #    On the very first call _last_result is None, so block on the
         #    just-submitted future to get a real result.
-        if prev_result is None:
-            prev_result = self._collect_pending()
+        if self._last_result is None:
+            self._last_result = self._collect_pending()
 
-        if single and prev_result is not None:
-            self._cache_text = self._pending_text  # text that produced prev_result
-            self._cache_vec = prev_result
+        if single and self._last_result is not None:
+            self._cache_text = self._pending_text
+            self._cache_vec = self._last_result
 
-        return prev_result  # type: ignore[return-value]
+        return self._last_result  # type: ignore[return-value]
 
     def encode_now(
         self,
@@ -390,10 +398,17 @@ class GraniteEmbedder(nn.Module):
         if self._pending_future is None:
             return self._last_result
         try:
-            result = self._pending_future.result(timeout=30.0)
+            # Use a short timeout — if the GPU is fast, 5s is plenty.
+            # If it times out, return the last known result so the tick
+            # doesn't block indefinitely.
+            result = self._pending_future.result(timeout=5.0)
             self._last_result = result
             self._pending_future = None
             return result
+        except concurrent.futures.TimeoutError:
+            # Background encode still running — return last result and let
+            # the next tick collect it.
+            return self._last_result
         except Exception as e:
             print(f"[GraniteEmbedder] async encode failed: {e}")
             self._pending_future = None

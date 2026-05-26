@@ -323,7 +323,10 @@ class ChipTrainer:
 
     def _soft_update(self) -> None:
         for param, target_param in zip(self.policy.parameters(), self.target_policy.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+            # Ensure both tensors are on the same device before copy_.
+            # The Adam lerp fallback can leave parameters in a mixed state on DirectML.
+            p_data = param.data.to(target_param.device)
+            target_param.data.copy_(self.tau * p_data + (1.0 - self.tau) * target_param.data)
 
     def migrate_agent(self, destination: str, node_id: str = "Chip") -> Optional[str]:
         if self.locomotion is None:

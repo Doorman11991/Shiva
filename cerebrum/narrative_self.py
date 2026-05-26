@@ -129,7 +129,8 @@ class NarrativeSelf(nn.Module):
 
         # Update core beliefs if outcome was significant
         if abs(outcome_valence) > 0.3:
-            belief_embedding = self.belief_encoder(z.unsqueeze(0)).squeeze(0)
+            dev = next(self.belief_encoder.parameters()).device
+            belief_embedding = self.belief_encoder(z.to(dev).unsqueeze(0)).squeeze(0)
             if len(self._core_beliefs) < self.n_core_beliefs:
                 self._core_beliefs.append(
                     BeliefVector(f"belief_{len(self._core_beliefs)}", belief_embedding)
@@ -157,10 +158,13 @@ class NarrativeSelf(nn.Module):
         if not self._narrative_buffer:
             return identity
 
-        # Encode recent narrative
-        narrative = torch.stack(self._narrative_buffer).to(dev).unsqueeze(0)  # (1, T, D)
-        _, h_n = self.narrative_gru(narrative)
-        narrative_vec = h_n[-1].squeeze(0)  # (D,)
+        # Encode recent narrative.
+        # nn.GRU is not supported on DirectML — run on CPU, move result back.
+        narrative_cpu = torch.stack(self._narrative_buffer).cpu().unsqueeze(0)  # (1, T, D)
+        gru_cpu = self.narrative_gru.cpu()
+        with torch.no_grad():
+            _, h_n = gru_cpu(narrative_cpu)
+        narrative_vec = h_n[-1].squeeze(0).to(dev)  # (D,)
 
         # Combine with identity
         combined = torch.cat([identity, narrative_vec], dim=-1).unsqueeze(0)  # (1, 2D)
