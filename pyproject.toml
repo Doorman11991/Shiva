@@ -35,6 +35,18 @@ dev = [
     "pytest",
     "ruff",
 ]
+# GPU backends — install the one that matches your hardware.
+# Run `python setup_device.py` to auto-detect and install the right one.
+cuda = [
+    "torch>=2.0",          # standard torch already includes CUDA wheels
+]
+directml = [
+    "torch-directml",      # AMD/Intel on Windows (requires Python 3.10-3.12)
+]
+demo = [
+    "flask",
+    "edge-tts",
+]
 
 [project.urls]
 Homepage = "https://github.com/Doorman11991/Chip"

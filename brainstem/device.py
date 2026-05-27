@@ -1,4 +1,4 @@
-﻿"""
+"""
 brainstem/device.py — Hardware device selection.
 
 The brainstem controls the body's basic infrastructure — the nervous
@@ -51,8 +51,13 @@ def pick_device(prefer: Optional[str] = None) -> str:
     """
     Select the best available compute device for Chip.
 
-    The CHIP_DEVICE environment variable, if set, overrides the `prefer`
-    argument. Recognised values: "auto", "directml", "cuda", "mps", "cpu".
+    Priority order:
+        1. CHIP_DEVICE environment variable
+        2. `prefer` argument
+        3. .chip_device config file (written by setup_device.py)
+        4. Live probe: CUDA -> DirectML -> MPS -> CPU
+
+    Recognised values: "auto", "directml", "cuda", "mps", "cpu".
     """
     env = os.environ.get("CHIP_DEVICE")
     if env:
@@ -62,23 +67,57 @@ def pick_device(prefer: Optional[str] = None) -> str:
     if pref not in _VALID_PREFERENCES:
         return prefer  # type: ignore[return-value]
 
-    chain = []
-    if pref == "directml":
-        chain = [_try_directml, _try_cuda, _try_mps]
-    elif pref == "cuda":
-        chain = [_try_cuda, _try_directml, _try_mps]
-    elif pref == "mps":
-        chain = [_try_mps, _try_cuda, _try_directml]
-    elif pref == "cpu":
+    if pref == "cpu":
         return "cpu"
-    else:
-        chain = [_try_directml, _try_cuda, _try_mps]
 
-    for probe in chain:
+    # If a specific backend is requested, try it first then fall through.
+    if pref != "auto":
+        chain_map = {
+            "directml": [_try_directml, _try_cuda, _try_mps],
+            "cuda":     [_try_cuda, _try_directml, _try_mps],
+            "mps":      [_try_mps, _try_cuda, _try_directml],
+        }
+        for probe in chain_map.get(pref, []):
+            result = probe()
+            if result is not None:
+                return result
+        return "cpu"
+
+    # Auto: read .chip_device config first for consistency with granite_embedder.
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".chip_device")
+    if os.path.exists(config_path):
+        try:
+            import json as _json
+            with open(config_path) as f:
+                cfg = _json.load(f)
+            backend = cfg.get("backend", "cpu")
+            verified = cfg.get("verified", False)
+            if verified:
+                result = _backend_str_to_device(backend)
+                if result is not None:
+                    return result
+        except Exception:
+            pass
+
+    # Live probe fallback: CUDA -> DirectML -> MPS -> CPU
+    for probe in [_try_cuda, _try_directml, _try_mps]:
         result = probe()
         if result is not None:
             return result
     return "cpu"
+
+
+def _backend_str_to_device(backend: str) -> Optional[str]:
+    """Try to get a working device string for a backend name."""
+    if backend == "cuda" or backend == "rocm":
+        return _try_cuda()
+    if backend == "directml":
+        return _try_directml()
+    if backend == "mps":
+        return _try_mps()
+    if backend == "cpu":
+        return "cpu"
+    return None
 
 
 def describe_device(device: str) -> str:

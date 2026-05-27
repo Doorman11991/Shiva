@@ -54,10 +54,14 @@ class AffectiveForecaster(nn.Module):
         Returns:
             (B, T, 1) predicted valence at each timestep.
         """
-        # nn.GRU is not supported on DirectML — run on CPU, move result back.
-        dev = trajectory.device
-        h, _ = self.gru.cpu()(trajectory.to('cpu'))
-        h = h.to(dev)
+        # nn.GRU is not supported on DirectML (privateuseone) — run on CPU.
+        # On CUDA/MPS/CPU the GRU runs natively on the device.
+        if trajectory.device.type == "privateuseone":
+            dev = trajectory.device
+            h, _ = self.gru.cpu()(trajectory.to('cpu'))
+            h = h.to(dev)
+        else:
+            h, _ = self.gru(trajectory)
         return self.head(h)               # (B, T, 1)
 
     def forecast_mean(self, trajectory: torch.Tensor) -> torch.Tensor:

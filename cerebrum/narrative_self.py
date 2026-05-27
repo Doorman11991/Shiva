@@ -158,13 +158,19 @@ class NarrativeSelf(nn.Module):
         if not self._narrative_buffer:
             return identity
 
-        # Encode recent narrative.
-        # nn.GRU is not supported on DirectML — run on CPU, move result back.
-        narrative_cpu = torch.stack(self._narrative_buffer).to('cpu').unsqueeze(0)  # (1, T, D)
-        gru_cpu = self.narrative_gru.cpu()
-        with torch.no_grad():
-            _, h_n = gru_cpu(narrative_cpu)
-        narrative_vec = h_n[-1].squeeze(0).to(dev)  # (D,)
+        # nn.GRU is not supported on DirectML (privateuseone) — run on CPU.
+        # On CUDA/MPS/CPU the GRU runs natively on the device.
+        if device.type == "privateuseone":
+            narrative_cpu = torch.stack(self._narrative_buffer).to('cpu').unsqueeze(0)
+            gru_cpu = self.narrative_gru.cpu()
+            with torch.no_grad():
+                _, h_n = gru_cpu(narrative_cpu)
+            narrative_vec = h_n[-1].squeeze(0).to(dev)
+        else:
+            narrative = torch.stack(self._narrative_buffer).to(dev).unsqueeze(0)
+            with torch.no_grad():
+                _, h_n = self.narrative_gru(narrative)
+            narrative_vec = h_n[-1].squeeze(0)
 
         # Combine with identity
         combined = torch.cat([identity, narrative_vec], dim=-1).unsqueeze(0)  # (1, 2D)

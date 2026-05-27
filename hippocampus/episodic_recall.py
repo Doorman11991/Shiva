@@ -101,24 +101,26 @@ class EpisodicRecall:
         if not self.memory._bank:
             return []
 
-        # All recall computation runs on CPU via numpy to avoid DirectML
-        # intercepting torch ops even on CPU tensors.
+        # Move query to CPU for recall computation — episodes are stored as CPU tensors.
         if query.device.type != 'cpu':
             q = query.detach().to(torch.device('cpu'))
         else:
             q = query.detach()
         if q.dim() > 1:
             q = q.squeeze(0)
-        q_np = F.normalize(q.float(), p=2, dim=0).numpy()
+        q = F.normalize(q.float(), p=2, dim=0)
 
-        # Stack signatures for vectorised cosine similarity
-        sigs_list = [
-            self._episode_signature(ep) for ep in self.memory._bank
-        ]
-        import numpy as np
-        sigs_np = np.stack([F.normalize(s.float(), p=2, dim=0).numpy() for s in sigs_list])
+        # Stack signatures for vectorised cosine similarity.
+        # Use numpy on DirectML (torch matmul on CPU tensors can be intercepted
+        # by the DirectML dispatcher). On CUDA/MPS/CPU use torch directly.
+        sigs_list = [self._episode_signature(ep) for ep in self.memory._bank]
+        sigs = torch.stack([F.normalize(s.float(), p=2, dim=0) for s in sigs_list])
 
-        sims = (sigs_np @ q_np).tolist()
+        if query.device.type == "privateuseone":
+            import numpy as np
+            sims = (sigs.numpy() @ q.numpy()).tolist()
+        else:
+            sims = (sigs @ q).tolist()
 
         # Pair with episodes, filter, sort
         scored = [

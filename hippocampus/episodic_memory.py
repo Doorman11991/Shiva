@@ -220,10 +220,16 @@ class EpisodicMemory(IEpisodicMemory):
         current_token = current_latent.unsqueeze(1)
         seq = torch.cat([endpoints_seq, current_token], dim=1)
 
-        # nn.GRU is not supported on DirectML — run on CPU, move result back.
-        with torch.no_grad():
-            _, h_n = self.narrative_encoder.cpu()(seq.to('cpu'))
-        identity = h_n[-1].to(device)
+        # nn.GRU is not supported on DirectML (privateuseone) — run on CPU.
+        # On CUDA/MPS/CPU the GRU runs natively on the device.
+        if device.type == "privateuseone":
+            with torch.no_grad():
+                _, h_n = self.narrative_encoder.cpu()(seq.to('cpu'))
+            identity = h_n[-1].to(device)
+        else:
+            with torch.no_grad():
+                _, h_n = self.narrative_encoder(seq)
+            identity = h_n[-1]
         return identity + self_token
 
 

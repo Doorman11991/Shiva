@@ -96,8 +96,14 @@ def _pick_device() -> torch.device:
                 cfg = json.load(f)
             backend = cfg.get("backend", "cpu")
             verified = cfg.get("verified", False)
-            if verified and backend != "cpu":
-                return _backend_to_device(backend)
+            if verified:
+                if backend == "cpu":
+                    return torch.device("cpu")
+                result = _backend_to_device(backend)
+                # _backend_to_device returns cpu as fallback — only use it
+                # if the backend actually matched (not a silent fallback).
+                if result.type != "cpu" or backend == "cpu":
+                    return result
         except Exception:
             pass
 
