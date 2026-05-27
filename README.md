@@ -33,6 +33,46 @@ The Granite-125m embedding model downloads on first use and stays cached. The Do
 
 You need Python 3.10 through 3.13, PyTorch 2.0 or newer, and Transformers 4.30+. GPU paths work for NVIDIA via CUDA, AMD on Windows through DirectML, and Apple Silicon through MPS.
 
+## Hardware and GPU Setup
+
+Chip runs on CPU out of the box. If you have a GPU, run the setup script once and it handles the rest:
+
+```bash
+python setup_device.py
+```
+
+That detects your hardware, installs the right torch backend, and writes a `.chip_device` config so every subsequent run picks the correct device automatically.
+
+What it installs per vendor:
+
+| Hardware | OS | Backend | What gets installed |
+|---|---|---|---|
+| NVIDIA | any | CUDA | `torch` with CUDA 12.1 wheels |
+| AMD | Windows | DirectML | `torch-directml` (requires Python 3.10-3.12) |
+| AMD | Linux | ROCm | `torch` with ROCm 6.0 wheels |
+| Intel | Windows | DirectML | `torch-directml` (requires Python 3.10-3.12) |
+| Intel | Linux | IPEX | `intel-extension-for-pytorch` |
+| Apple Silicon | macOS | MPS | nothing, MPS is bundled in standard torch |
+| CPU only | any | CPU | nothing |
+
+`torch-directml` is never a hard dependency. `pip install chip-brain` works on any platform without it.
+
+**AMD and Intel on Windows with Python 3.13+:** `torch-directml` only builds for Python 3.10-3.12. The setup script detects this, creates a `.venv-dml` virtual environment using Python 3.12, and installs everything there. Use `demo_dml.bat` to start the demo server from that venv. For the interactive console, activate the venv first:
+
+```bash
+.venv-dml\Scripts\activate
+python run.py
+```
+
+**Everyone else:** `python run.py` and `python demo/app.py` work directly after setup.
+
+You can also force a specific device without running setup:
+
+```bash
+CHIP_DEVICE=cuda python run.py
+CHIP_DEVICE=cpu  python run.py
+```
+
 ## Quick Start
 
 Launch the interactive console:
